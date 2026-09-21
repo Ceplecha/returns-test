@@ -119,6 +119,13 @@ def curry(function: Callable[..., _ReturnType]) -> Callable[..., _ReturnType]:
     argspec = Signature.from_callable(function).bind_partial()
 
     def decorator(*args, **kwargs):
+        kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in argspec.signature.parameters
+        }
+        if len(args) > len(argspec.signature.parameters):
+            args = args[:len(argspec.signature.parameters)]
         return _eager_curry(function, argspec, args, kwargs)
 
     return wraps(function)(decorator)
