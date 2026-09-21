@@ -973,10 +973,7 @@ def impure_safe(  # noqa: WPS234
             *args: _FuncParams.args,
             **kwargs: _FuncParams.kwargs,
         ) -> IOResult[_NewValueType, _ExceptionType]:
-            try:
-                return IOSuccess(inner_function(*args, **kwargs))
-            except inner_exceptions as exc:
-                return IOFailure(exc)
+            pass
 
         return decorator
 
