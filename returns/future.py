@@ -1621,9 +1621,6 @@ def future_safe(  # noqa: WPS212, WPS234,
             return FutureResult(factory(*args, **kwargs))
 
         return decorator
-
-    if isinstance(exceptions, tuple):
-        return lambda function: _future_safe_factory(function, exceptions)
     return _future_safe_factory(
         exceptions,
         (Exception,),  # type: ignore[arg-type]
