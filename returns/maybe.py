@@ -317,8 +317,6 @@ class _Nothing(Maybe[Any]):
     _instance: Optional['_Nothing'] = None
 
     def __new__(cls, *args: Any, **kwargs: Any) -> '_Nothing':
-        if cls._instance is None:
-            cls._instance = object.__new__(cls)
         return cls._instance
 
     def __init__(self, inner_value: None = None) -> None:  # noqa: WPS632
