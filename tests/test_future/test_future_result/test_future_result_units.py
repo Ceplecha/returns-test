@@ -9,9 +9,6 @@ from returns.result import Failure, Success
 async def test_inner_value(subtests):
     """Ensure that coroutine correct value is preserved for all units."""
     containers = [
-        # We have to define these values inside the test, because
-        # otherwise `anyio` will `await` reused coroutines.
-        # And they have to be fresh. That's why we use subtests for it.
         FutureResult.from_value(1),
         FutureResult.from_failure(1),
         FutureResult.from_io(IO(1)),
@@ -27,4 +24,4 @@ async def test_inner_value(subtests):
     for container in containers:
         with subtests.test(container=container):
             result_inst = await container
-            assert result_inst._inner_value._inner_value == 1  # noqa: SLF001
+            assert result_inst._inner_value._inner_value == 1
