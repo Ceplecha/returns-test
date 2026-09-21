@@ -1,14 +1,12 @@
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import ClassVar, Generic, Never, TypeAlias, TypeVar, final
+from typing import Generic, Never, TypeVar, final
 
 from returns.contrib.hypothesis.laws import check_all_laws
 from returns.functions import compose, identity
 from returns.primitives.asserts import assert_equal
 from returns.primitives.container import BaseContainer
-from returns.primitives.hkt import KindN, SupportsKind1
+from returns.primitives.hkt import SupportsKind1
 from returns.primitives.laws import (
-    Law,
     Law1,
     Law3,
     Lawful,
@@ -20,12 +18,9 @@ _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _MappableType = TypeVar('_MappableType', bound='_MappableN')
 _ValueType = TypeVar('_ValueType')
 _NewValueType = TypeVar('_NewValueType')
-
-# Used in laws:
 _NewType1 = TypeVar('_NewType1')
 _NewType2 = TypeVar('_NewType2')
 
@@ -37,18 +32,12 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def identity_law(
-        mappable: '_MappableN[_FirstType, _SecondType, _ThirdType]',
-    ) -> None:
+    def identity_law(mappable):
         """Mapping identity over a value must return the value unchanged."""
         assert_equal(mappable.map(identity), mappable)
 
     @law_definition
-    def associative_law(
-        mappable: '_MappableN[_FirstType, _SecondType, _ThirdType]',
-        first: Callable[[_FirstType], _NewType1],
-        second: Callable[[_NewType1], _NewType2],
-    ) -> None:
+    def associative_law(mappable, first, second):
         """Mapping twice or mapping a composition is the same thing."""
         assert_equal(
             mappable.map(first).map(second),
@@ -63,21 +52,14 @@ class _MappableN(
     """Simple "user-defined" copy of `MappableN`."""
 
     __slots__ = ()
+    _laws = (Law1(_LawSpec.identity_law), Law3(_LawSpec.associative_law))
 
-    _laws: ClassVar[Sequence[Law]] = (
-        Law1(_LawSpec.identity_law),
-        Law3(_LawSpec.associative_law),
-    )
-
-    @abstractmethod  # noqa: WPS125
-    def map(
-        self: _MappableType,
-        function: Callable[[_FirstType], _UpdatedType],
-    ) -> KindN[_MappableType, _UpdatedType, _SecondType, _ThirdType]:
+    @abstractmethod
+    def map(self, function):
         """Allows to run a pure function over a container."""
 
 
-_Mappable1: TypeAlias = _MappableN[_FirstType, Never, Never]
+_Mappable1 = _MappableN[_FirstType, Never, Never]
 
 
 class _ParentWrapper(_Mappable1[_ValueType]):
@@ -91,18 +73,11 @@ class _Wrapper(
 ):
     """Simple instance of `_MappableN`."""
 
-    _inner_value: _ValueType
-
-    def __init__(self, inner_value: _ValueType) -> None:
+    def __init__(self, inner_value):
         super().__init__(inner_value)
 
-    def map(
-        self,
-        function: Callable[[_ValueType], _NewValueType],
-    ) -> '_Wrapper[_NewValueType]':
+    def map(self, function):
         return _Wrapper(function(self._inner_value))
 
 
-# We need to use `use_init=True` because `MappableN` does not automatically
-# get a strategy from `strategy_from_container`.
 check_all_laws(_Wrapper, use_init=True)

@@ -24,8 +24,5 @@ class BiMappableN(
     __slots__ = ()
 
 
-#: Type alias for kinds with two type arguments.
 BiMappable2 = BiMappableN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 BiMappable3 = BiMappableN[_FirstType, _SecondType, _ThirdType]

@@ -2,14 +2,13 @@ from copy import copy, deepcopy
 
 import pytest
 
-from returns.maybe import Nothing, Some, _Nothing  # noqa: PLC2701
+from returns.maybe import Nothing, Some, _Nothing
 from returns.primitives.exceptions import ImmutableStateError
 
 
 def test_equals():
     """Ensures that ``.equals`` method works correctly."""
     inner_value = 1
-
     assert Some(inner_value).equals(Some(inner_value))
     assert Nothing.equals(Nothing)
 
@@ -23,7 +22,7 @@ def test_not_equals():
 
 def test_equality():
     """Ensures that containers can be compared."""
-    assert Nothing is Nothing  # noqa: PLR0124, WPS312
+    assert Nothing is Nothing
     assert Nothing == _Nothing() == _Nothing(None)
     assert Some(5) == Some(5)
     assert hash(Some(1))
@@ -32,9 +31,9 @@ def test_equality():
 
 def test_nonequality():
     """Ensures that containers are not compared to regular values."""
-    assert Nothing is not None  # type: ignore[comparison-overlap]
-    assert Nothing != None  # noqa: E711
-    assert _Nothing(None) != None  # noqa: E711
+    assert Nothing is not None
+    assert Nothing != None
+    assert _Nothing(None) != None
     assert Some(5) != 5
     assert Some(3) is not Some(3)
 
@@ -42,7 +41,6 @@ def test_nonequality():
 def test_is_compare():
     """Ensures that `is` operator works correctly."""
     some_container = Some(1)
-
     assert Nothing.bind(lambda state: state) is Nothing
     assert some_container is not Some(1)
 
@@ -50,42 +48,36 @@ def test_is_compare():
 def test_immutability_failure():
     """Ensures that Failure container is immutable."""
     with pytest.raises(ImmutableStateError):
-        Nothing._inner_state = 1  # noqa: SLF001
-
+        Nothing._inner_state = 1
     with pytest.raises(ImmutableStateError):
         Nothing.missing = 2
-
     with pytest.raises(ImmutableStateError):
-        del Nothing._inner_state  # type: ignore # noqa: SLF001, WPS420
-
+        del Nothing._inner_state
     with pytest.raises(AttributeError):
-        Nothing.missing  # type: ignore # noqa: B018
+        Nothing.missing
 
 
 def test_immutability_success():
     """Ensures that Success container is immutable."""
     with pytest.raises(ImmutableStateError):
-        Some(0)._inner_state = 1  # noqa: SLF001
-
+        Some(0)._inner_state = 1
     with pytest.raises(ImmutableStateError):
         Some(1).missing = 2
-
     with pytest.raises(ImmutableStateError):
-        del Some(0)._inner_state  # type: ignore # noqa: SLF001, WPS420
-
+        del Some(0)._inner_state
     with pytest.raises(AttributeError):
-        Some(1).missing  # type: ignore # noqa: B018
+        Some(1).missing
 
 
 def test_success_immutable_copy():
     """Ensures that Success returns it self when passed to copy function."""
-    some = Some(1)  # noqa: WPS110
+    some = Some(1)
     assert some is copy(some)
 
 
 def test_success_immutable_deepcopy():
     """Ensures that Success returns it self when passed to deepcopy function."""
-    some = Some(1)  # noqa: WPS110
+    some = Some(1)
     assert some is deepcopy(some)
 
 

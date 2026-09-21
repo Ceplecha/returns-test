@@ -1,16 +1,14 @@
 from abc import abstractmethod
-from collections.abc import Callable, Iterable
 from typing import TypeVar, final
 
 from returns.interfaces.applicative import ApplicativeN
 from returns.interfaces.failable import FailableN
-from returns.primitives.hkt import KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ApplicativeKind = TypeVar('_ApplicativeKind', bound=ApplicativeN)
 _FailableKind = TypeVar('_FailableKind', bound=FailableN)
 
@@ -48,17 +46,7 @@ class AbstractFold:
     @final
     @kinded
     @classmethod
-    def loop(
-        cls,
-        iterable: Iterable[
-            KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-        function: Callable[
-            [_FirstType],
-            Callable[[_UpdatedType], _UpdatedType],
-        ],
-    ) -> KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType]:
+    def loop(cls, iterable, acc, function):
         """
         Allows to make declarative loops for any ``ApplicativeN`` subtypes.
 
@@ -93,23 +81,7 @@ class AbstractFold:
     @final
     @kinded
     @classmethod
-    def collect(
-        cls,
-        iterable: Iterable[
-            KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[
-            _ApplicativeKind,
-            'tuple[_FirstType, ...]',
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _ApplicativeKind,
-        'tuple[_FirstType, ...]',
-        _SecondType,
-        _ThirdType,
-    ]:
+    def collect(cls, iterable, acc):
         """
         Transforms an iterable of containers into a single container.
 
@@ -158,23 +130,7 @@ class AbstractFold:
     @final
     @kinded
     @classmethod
-    def collect_all(
-        cls,
-        iterable: Iterable[
-            KindN[_FailableKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[
-            _FailableKind,
-            'tuple[_FirstType, ...]',
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _FailableKind,
-        'tuple[_FirstType, ...]',
-        _SecondType,
-        _ThirdType,
-    ]:
+    def collect_all(cls, iterable, acc):
         """
         Transforms an iterable of containers into a single container.
 
@@ -219,38 +175,9 @@ class AbstractFold:
         """
         return cls._collect_all(iterable, acc)
 
-    # Protected part
-    # ==============
-
     @classmethod
     @abstractmethod
-    def _loop(
-        cls,
-        iterable: Iterable[
-            KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-        function: Callable[
-            [_FirstType],
-            Callable[[_UpdatedType], _UpdatedType],
-        ],
-        concat: Callable[
-            [
-                KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-                KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-                KindN[
-                    _ApplicativeKind,
-                    Callable[
-                        [_FirstType],
-                        Callable[[_UpdatedType], _UpdatedType],
-                    ],
-                    _SecondType,
-                    _ThirdType,
-                ],
-            ],
-            KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-        ],
-    ) -> KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType]:
+    def _loop(cls, iterable, acc, function, concat):
         """
         Protected part of ``loop`` method.
 
@@ -258,53 +185,13 @@ class AbstractFold:
         """
 
     @classmethod
-    def _collect(
-        cls,
-        iterable: Iterable[
-            KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[
-            _ApplicativeKind,
-            'tuple[_FirstType, ...]',
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _ApplicativeKind,
-        'tuple[_FirstType, ...]',
-        _SecondType,
-        _ThirdType,
-    ]:
-        return cls._loop(
-            iterable,
-            acc,
-            _concat_sequence,
-            _concat_applicative,
-        )
+    def _collect(cls, iterable, acc):
+        return cls._loop(iterable, acc, _concat_sequence, _concat_applicative)
 
     @classmethod
-    def _collect_all(
-        cls,
-        iterable: Iterable[
-            KindN[_FailableKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[
-            _FailableKind,
-            'tuple[_FirstType, ...]',
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _FailableKind,
-        'tuple[_FirstType, ...]',
-        _SecondType,
-        _ThirdType,
-    ]:
+    def _collect_all(cls, iterable, acc):
         return cls._loop(
-            iterable,
-            acc,
-            _concat_sequence,
-            _concat_failable_safely,
+            iterable, acc, _concat_sequence, _concat_failable_safely
         )
 
 
@@ -318,33 +205,7 @@ class Fold(AbstractFold):
     __slots__ = ()
 
     @classmethod
-    def _loop(
-        cls,
-        iterable: Iterable[
-            KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-        ],
-        acc: KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-        function: Callable[
-            [_FirstType],
-            Callable[[_UpdatedType], _UpdatedType],
-        ],
-        concat: Callable[
-            [
-                KindN[_ApplicativeKind, _FirstType, _SecondType, _ThirdType],
-                KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-                KindN[
-                    _ApplicativeKind,
-                    Callable[
-                        [_FirstType],
-                        Callable[[_UpdatedType], _UpdatedType],
-                    ],
-                    _SecondType,
-                    _ThirdType,
-                ],
-            ],
-            KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType],
-        ],
-    ) -> KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType]:
+    def _loop(cls, iterable, acc, function, concat):
         """
         Protected part of ``loop`` method.
 
@@ -356,16 +217,7 @@ class Fold(AbstractFold):
         return acc
 
 
-# Helper functions
-# ================
-
-
-def _concat_sequence(
-    first: _FirstType,
-) -> Callable[
-    ['tuple[_FirstType, ...]'],
-    'tuple[_FirstType, ...]',
-]:
+def _concat_sequence(first):
     """
     Concats a given item to an existing sequence.
 
@@ -376,50 +228,12 @@ def _concat_sequence(
     return lambda second: (*second, first)
 
 
-def _concat_applicative(
-    current: KindN[
-        _ApplicativeKind,
-        _FirstType,
-        _SecondType,
-        _ThirdType,
-    ],
-    acc: KindN[
-        _ApplicativeKind,
-        _UpdatedType,
-        _SecondType,
-        _ThirdType,
-    ],
-    function: KindN[
-        _ApplicativeKind,
-        Callable[[_FirstType], Callable[[_UpdatedType], _UpdatedType]],
-        _SecondType,
-        _ThirdType,
-    ],
-) -> KindN[_ApplicativeKind, _UpdatedType, _SecondType, _ThirdType]:
+def _concat_applicative(current, acc, function):
     """Concats two applicatives using a curried-like function."""
     return acc.apply(current.apply(function))
 
 
-def _concat_failable_safely(
-    current: KindN[
-        _FailableKind,
-        _FirstType,
-        _SecondType,
-        _ThirdType,
-    ],
-    acc: KindN[
-        _FailableKind,
-        _UpdatedType,
-        _SecondType,
-        _ThirdType,
-    ],
-    function: KindN[
-        _FailableKind,
-        Callable[[_FirstType], Callable[[_UpdatedType], _UpdatedType]],
-        _SecondType,
-        _ThirdType,
-    ],
-) -> KindN[_FailableKind, _UpdatedType, _SecondType, _ThirdType]:
+def _concat_failable_safely(current, acc, function):
     """
     Concats two ``FailableN`` using a curried-like function and a fallback.
 

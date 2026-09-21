@@ -9,26 +9,20 @@ Use this type to mark that this specific async opetaion can fail.
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Never, Self, TypeVar
+from typing import TYPE_CHECKING, Never, TypeVar
 
 from returns.interfaces.specific import future, ioresult
-from returns.primitives.hkt import KindN
 
 if TYPE_CHECKING:
-    from returns.future import Future, FutureResult  # noqa: WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ValueType = TypeVar('_ValueType')
 _ErrorType = TypeVar('_ErrorType')
-
 _FutureResultLikeType = TypeVar(
-    '_FutureResultLikeType',
-    bound='FutureResultLikeN',
+    '_FutureResultLikeType', bound='FutureResultLikeN'
 )
 
 
@@ -46,45 +40,24 @@ class FutureResultLikeN(
     __slots__ = ()
 
     @abstractmethod
-    def bind_future_result(
-        self: _FutureResultLikeType,
-        function: Callable[
-            [_FirstType],
-            FutureResult[_UpdatedType, _SecondType],
-        ],
-    ) -> KindN[_FutureResultLikeType, _UpdatedType, _SecondType, _ThirdType]:
+    def bind_future_result(self, function):
         """Allows to bind ``FutureResult`` functions over a container."""
 
     @abstractmethod
-    def bind_async_future_result(
-        self: _FutureResultLikeType,
-        function: Callable[
-            [_FirstType],
-            Awaitable[FutureResult[_UpdatedType, _SecondType]],
-        ],
-    ) -> KindN[_FutureResultLikeType, _UpdatedType, _SecondType, _ThirdType]:
+    def bind_async_future_result(self, function):
         """Allows to bind async ``FutureResult`` functions over container."""
 
     @classmethod
     @abstractmethod
-    def from_failed_future(
-        cls: type[_FutureResultLikeType],
-        inner_value: Future[_ErrorType],
-    ) -> KindN[_FutureResultLikeType, _FirstType, _ErrorType, _ThirdType]:
+    def from_failed_future(cls, inner_value):
         """Creates new container from a failed ``Future``."""
 
     @classmethod
-    def from_future_result(
-        cls,
-        inner_value: FutureResult[_ValueType, _ErrorType],
-    ) -> KindN[Self, _ValueType, _ErrorType, _ThirdType]:
+    def from_future_result(cls, inner_value):
         """Creates container from ``FutureResult`` instance."""
 
 
-#: Type alias for kinds with two type arguments.
 FutureResultLike2 = FutureResultLikeN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 FutureResultLike3 = FutureResultLikeN[_FirstType, _SecondType, _ThirdType]
 
 
@@ -102,8 +75,5 @@ class FutureResultBasedN(
     __slots__ = ()
 
 
-#: Type alias for kinds with two type arguments.
 FutureResultBased2 = FutureResultBasedN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 FutureResultBased3 = FutureResultBasedN[_FirstType, _SecondType, _ThirdType]

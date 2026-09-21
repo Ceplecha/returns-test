@@ -1,23 +1,20 @@
 from abc import ABC
-from collections.abc import Callable, Generator, Iterator
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ClassVar, Never, Optional, TypeVar, final
+from typing import TYPE_CHECKING, Any, TypeVar, final
 
 from typing_extensions import ParamSpec
 
 from returns.interfaces.specific.maybe import MaybeBased2
 from returns.primitives.container import BaseContainer, container_equality
 from returns.primitives.exceptions import UnwrapFailedError
-from returns.primitives.hkt import Kind1, SupportsKind1
+from returns.primitives.hkt import SupportsKind1
 
-# Definitions:
 _ValueType_co = TypeVar('_ValueType_co', covariant=True)
 _NewValueType = TypeVar('_NewValueType')
-
 _FuncParams = ParamSpec('_FuncParams')
 
 
-class Maybe(  # type: ignore[type-var]
+class Maybe(
     BaseContainer,
     SupportsKind1['Maybe', _ValueType_co],
     MaybeBased2[_ValueType_co, None],
@@ -36,20 +33,10 @@ class Maybe(  # type: ignore[type-var]
     """
 
     __slots__ = ()
-
-    _inner_value: _ValueType_co | None
     __match_args__ = ('_inner_value',)
-
-    #: Alias for `Nothing`
-    empty: ClassVar['Maybe[Any]']
-
-    #: Typesafe equality comparison with other `Result` objects.
     equals = container_equality
 
-    def map(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType],
-    ) -> 'Maybe[_NewValueType]':
+    def map(self, function):
         """
         Composes successful container with a pure function.
 
@@ -64,10 +51,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def apply(
-        self,
-        function: Kind1['Maybe', Callable[[_ValueType_co], _NewValueType]],
-    ) -> 'Maybe[_NewValueType]':
+    def apply(self, function):
         """
         Calls a wrapped function in a container on this container.
 
@@ -85,10 +69,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def bind(
-        self,
-        function: Callable[[_ValueType_co], Kind1['Maybe', _NewValueType]],
-    ) -> 'Maybe[_NewValueType]':
+    def bind(self, function):
         """
         Composes successful container with a function that returns a container.
 
@@ -103,10 +84,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def bind_optional(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType | None],
-    ) -> 'Maybe[_NewValueType]':
+    def bind_optional(self, function):
         """
         Binds a function returning an optional value over a container.
 
@@ -123,10 +101,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def lash(
-        self,
-        function: Callable[[Any], Kind1['Maybe', _ValueType_co]],
-    ) -> 'Maybe[_ValueType_co]':
+    def lash(self, function):
         """
         Composes failed container with a function that returns a container.
 
@@ -145,15 +120,12 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def __iter__(self) -> Iterator[_ValueType_co]:
+    def __iter__(self):
         """API for :ref:`do-notation`."""
         yield self.unwrap()
 
     @classmethod
-    def do(
-        cls,
-        expr: Generator[_NewValueType, None, None],
-    ) -> 'Maybe[_NewValueType]':
+    def do(cls, expr):
         """
         Allows working with unwrapped values of containers in a safe way.
 
@@ -179,12 +151,9 @@ class Maybe(  # type: ignore[type-var]
         try:
             return Maybe.from_value(next(expr))
         except UnwrapFailedError as exc:
-            return exc.halted_container  # type: ignore
+            return exc.halted_container
 
-    def value_or(
-        self,
-        default_value: _NewValueType,
-    ) -> _ValueType_co | _NewValueType:
+    def value_or(self, default_value):
         """
         Get value from successful container or default value from failed one.
 
@@ -196,10 +165,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def or_else_call(
-        self,
-        function: Callable[[], _NewValueType],
-    ) -> _ValueType_co | _NewValueType:
+    def or_else_call(self, function):
         """
         Get value from successful container or default value from failed one.
 
@@ -233,7 +199,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def unwrap(self) -> _ValueType_co:
+    def unwrap(self):
         """
         Get value from successful container or raise exception for failed one.
 
@@ -250,7 +216,7 @@ class Maybe(  # type: ignore[type-var]
 
         """
 
-    def failure(self) -> None:
+    def failure(self):
         """
         Get failed value from failed container or raise exception from success.
 
@@ -268,10 +234,7 @@ class Maybe(  # type: ignore[type-var]
         """
 
     @classmethod
-    def from_value(
-        cls,
-        inner_value: _NewValueType,
-    ) -> 'Maybe[_NewValueType]':
+    def from_value(cls, inner_value):
         """
         Creates new instance of ``Maybe`` container based on a value.
 
@@ -285,10 +248,7 @@ class Maybe(  # type: ignore[type-var]
         return Some(inner_value)
 
     @classmethod
-    def from_optional(
-        cls,
-        inner_value: _NewValueType | None,
-    ) -> 'Maybe[_NewValueType]':
+    def from_optional(cls, inner_value):
         """
         Creates new instance of ``Maybe`` container based on an optional value.
 
@@ -303,7 +263,7 @@ class Maybe(  # type: ignore[type-var]
             return _Nothing(inner_value)
         return Some(inner_value)
 
-    def __bool__(self) -> bool:
+    def __bool__(self):
         """Convert (or treat) an instance of ``Maybe`` as a boolean."""
 
 
@@ -312,16 +272,14 @@ class _Nothing(Maybe[Any]):
     """Represents an empty state."""
 
     __slots__ = ()
+    _instance = None
 
-    _inner_value: None
-    _instance: Optional['_Nothing'] = None
-
-    def __new__(cls, *args: Any, **kwargs: Any) -> '_Nothing':
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             pass
         return cls._instance
 
-    def __init__(self, inner_value: None = None) -> None:  # noqa: WPS632
+    def __init__(self, inner_value=None):
         """
         Private constructor for ``_Nothing`` type.
 
@@ -377,7 +335,7 @@ class _Nothing(Maybe[Any]):
         """Raises an exception, since it does not have a value inside."""
         raise UnwrapFailedError(self)
 
-    def failure(self) -> None:
+    def failure(self):
         """Returns failed value."""
         return self._inner_value
 
@@ -396,13 +354,11 @@ class Some(Maybe[_ValueType_co]):
 
     __slots__ = ()
 
-    _inner_value: _ValueType_co
-
-    def __init__(self, inner_value: _ValueType_co) -> None:
+    def __init__(self, inner_value):
         """Some constructor."""
         super().__init__(inner_value)
 
-    if not TYPE_CHECKING:  # noqa: WPS604  # pragma: no branch
+    if not TYPE_CHECKING:
 
         def bind(self, function):
             """Binds current container to a function that returns container."""
@@ -423,7 +379,7 @@ class Some(Maybe[_ValueType_co]):
     def apply(self, container):
         """Calls a wrapped function in a container on this container."""
         if isinstance(container, Some):
-            return self.map(container.unwrap())  # type: ignore
+            return self.map(container.unwrap())
         return container
 
     def lash(self, function):
@@ -452,14 +408,11 @@ class Some(Maybe[_ValueType_co]):
         return True
 
 
-#: Public unit value of protected :class:`~_Nothing` type.
-Nothing: Maybe[Never] = _Nothing()
+Nothing = _Nothing()
 Maybe.empty = Nothing
 
 
-def maybe(
-    function: Callable[_FuncParams, _ValueType_co | None],
-) -> Callable[_FuncParams, Maybe[_ValueType_co]]:
+def maybe(function):
     """
     Decorator to convert ``None``-returning function to ``Maybe`` container.
 
@@ -482,10 +435,7 @@ def maybe(
     """
 
     @wraps(function)
-    def decorator(
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> Maybe[_ValueType_co]:
+    def decorator(*args, **kwargs):
         return Maybe.from_optional(function(*args, **kwargs))
 
     return decorator

@@ -2,27 +2,19 @@ from typing import TypeVar, overload
 
 from returns.functions import identity
 from returns.interfaces.bindable import BindableN
-from returns.maybe import Maybe, Nothing, Some
+from returns.maybe import Nothing, Some
 from returns.pipeline import is_successful
-from returns.primitives.hkt import KindN, kinded
-from returns.result import Failure, Result, Success
+from returns.primitives.hkt import kinded
+from returns.result import Failure, Success
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _BindableKind = TypeVar('_BindableKind', bound=BindableN)
 
 
 @kinded
-def flatten(
-    container: KindN[
-        _BindableKind,
-        KindN[_BindableKind, _FirstType, _SecondType, _ThirdType],
-        _SecondType,
-        _ThirdType,
-    ],
-) -> KindN[_BindableKind, _FirstType, _SecondType, _ThirdType]:
+def flatten(container):
     """
     Joins two nested containers together.
 
@@ -49,9 +41,7 @@ def flatten(
     return container.bind(identity)
 
 
-def result_to_maybe(
-    result_container: Result[_FirstType, _SecondType],
-) -> Maybe[_FirstType]:
+def result_to_maybe(result_container):
     """
     Converts ``Result`` container to ``Maybe`` container.
 
@@ -72,22 +62,14 @@ def result_to_maybe(
 
 
 @overload
-def maybe_to_result(
-    maybe_container: Maybe[_FirstType],
-) -> Result[_FirstType, None]: ...
+def maybe_to_result(maybe_container): ...
 
 
 @overload
-def maybe_to_result(
-    maybe_container: Maybe[_FirstType],
-    default_error: _SecondType,
-) -> Result[_FirstType, _SecondType]: ...
+def maybe_to_result(maybe_container, default_error): ...
 
 
-def maybe_to_result(
-    maybe_container: Maybe[_FirstType],
-    default_error: _SecondType | None = None,
-) -> Result[_FirstType, _SecondType | None]:
+def maybe_to_result(maybe_container, default_error=None):
     """
     Converts ``Maybe`` container to ``Result`` container.
 
