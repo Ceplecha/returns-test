@@ -1,17 +1,12 @@
-from collections.abc import Callable
 from functools import partial as _partial
 from functools import wraps
 from inspect import BoundArguments, Signature
-from typing import Any, TypeAlias, TypeVar
+from typing import TypeVar
 
 _ReturnType = TypeVar('_ReturnType')
 
 
-def partial(
-    func: Callable[..., _ReturnType],
-    *args: Any,
-    **kwargs: Any,
-) -> Callable[..., _ReturnType]:
+def partial(func, *args, **kwargs):
     """
     Typed partial application.
 
@@ -38,7 +33,7 @@ def partial(
     return _partial(func, *args, **kwargs)
 
 
-def curry(function: Callable[..., _ReturnType]) -> Callable[..., _ReturnType]:
+def curry(function):
     """
     Typed currying decorator.
 
@@ -124,12 +119,7 @@ def curry(function: Callable[..., _ReturnType]) -> Callable[..., _ReturnType]:
     return wraps(function)(decorator)
 
 
-def _eager_curry(
-    function: Callable[..., _ReturnType],
-    argspec,
-    args: tuple,
-    kwargs: dict,
-) -> _ReturnType | Callable[..., _ReturnType]:
+def _eager_curry(function, argspec, args, kwargs):
     """
     Internal ``curry`` implementation.
 
@@ -140,28 +130,16 @@ def _eager_curry(
     if full_args is not None:
         return function(*full_args[0], **full_args[1])
 
-    # We use closures to avoid names conflict between
-    # the function args and args of the curry implementation.
     def decorator(*inner_args, **inner_kwargs):
         return _eager_curry(function, intermediate, inner_args, inner_kwargs)
 
     return wraps(function)(decorator)
 
 
-_ArgSpec: TypeAlias = (
-    # Case when all arguments are bound and function can be called:
-    tuple[None, tuple[tuple, dict]]
-    |
-    # Case when there are still unbound arguments:
-    tuple[BoundArguments, None]
-)
+_ArgSpec = tuple[None, tuple[tuple, dict]] | tuple[BoundArguments, None]
 
 
-def _intermediate_argspec(
-    argspec: BoundArguments,
-    args: tuple,
-    kwargs: dict,
-) -> _ArgSpec:
+def _intermediate_argspec(argspec, args, kwargs):
     """
     That's where ``curry`` magic happens.
 
@@ -176,15 +154,8 @@ def _intermediate_argspec(
     """
     full_args = argspec.args + args
     full_kwargs = {**argspec.kwargs, **kwargs}
-
     try:
         argspec.signature.bind(*full_args, **full_kwargs)
     except TypeError:
-        # Another option is to copy-paste and patch `getcallargs` func
-        # but in this case we get responsibility to maintain it over
-        # python releases.
-        # This place is also responsible for raising ``TypeError`` for cases:
-        # 1. When incorrect argument is provided
-        # 2. When too many arguments are provided
-        return argspec.signature.bind_partial(*full_args, **full_kwargs), None
-    return None, (full_args, full_kwargs)
+        return (argspec.signature.bind_partial(*full_args, **full_kwargs), None)
+    return (None, (full_args, full_kwargs))

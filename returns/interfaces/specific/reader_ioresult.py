@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, TypeVar, final
 
 from returns.interfaces.specific import ioresult, reader, reader_result
-from returns.primitives.hkt import KindN
 from returns.primitives.laws import (
-    Law,
     Law2,
     Lawful,
     LawSpecDef,
@@ -15,21 +12,16 @@ from returns.primitives.laws import (
 )
 
 if TYPE_CHECKING:
-    from returns.context import ReaderIOResult  # noqa: WPS433
-    from returns.io import IOResult  # noqa: F401, WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ValueType = TypeVar('_ValueType')
 _ErrorType = TypeVar('_ErrorType')
 _EnvType = TypeVar('_EnvType')
-
 _ReaderIOResultLikeType = TypeVar(
-    '_ReaderIOResultLikeType',
-    bound='ReaderIOResultLikeN',
+    '_ReaderIOResultLikeType', bound='ReaderIOResultLikeN'
 )
 
 
@@ -46,25 +38,15 @@ class ReaderIOResultLikeN(
     __slots__ = ()
 
     @abstractmethod
-    def bind_context_ioresult(
-        self: _ReaderIOResultLikeType,
-        function: Callable[
-            [_FirstType],
-            ReaderIOResult[_UpdatedType, _SecondType, _ThirdType],
-        ],
-    ) -> KindN[_ReaderIOResultLikeType, _UpdatedType, _SecondType, _ThirdType]:
+    def bind_context_ioresult(self, function):
         """Binds a ``ReaderIOResult`` returning function over a container."""
 
     @classmethod
     @abstractmethod
-    def from_ioresult_context(
-        cls: type[_ReaderIOResultLikeType],
-        inner_value: ReaderIOResult[_ValueType, _ErrorType, _EnvType],
-    ) -> KindN[_ReaderIOResultLikeType, _ValueType, _ErrorType, _EnvType]:
+    def from_ioresult_context(cls, inner_value):
         """Unit method to create new containers from ``ReaderIOResult``."""
 
 
-#: Type alias for kinds with three type arguments.
 ReaderIOResultLike3 = ReaderIOResultLikeN[_FirstType, _SecondType, _ThirdType]
 
 
@@ -79,14 +61,11 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def asking_law(
-        container: ReaderIOResultBasedN[_FirstType, _SecondType, _ThirdType],
-        env: _ThirdType,
-    ) -> None:
+    def asking_law(container, env):
         """Asking for an env, always returns the env."""
-        assert container.ask().__call__(  # noqa: PLC2801
-            env,
-        ) == container.from_value(env).__call__(env)  # noqa: PLC2801
+        assert container.ask().__call__(env) == container.from_value(
+            env
+        ).__call__(env)
 
 
 class ReaderIOResultBasedN(
@@ -95,7 +74,6 @@ class ReaderIOResultBasedN(
         _FirstType,
         _SecondType,
         _ThirdType,
-        # Calls:
         'IOResult[_FirstType, _SecondType]',
         _ThirdType,
     ],
@@ -111,9 +89,7 @@ class ReaderIOResultBasedN(
     """
 
     __slots__ = ()
+    _laws = (Law2(_LawSpec.asking_law),)
 
-    _laws: ClassVar[Sequence[Law]] = (Law2(_LawSpec.asking_law),)
 
-
-#: Type alias for kinds with three type arguments.
 ReaderIOResultBased3 = ReaderIOResultBasedN[_FirstType, _SecondType, _ThirdType]

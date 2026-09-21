@@ -1,25 +1,16 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.altable import AltableN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _AltableKind = TypeVar('_AltableKind', bound=AltableN)
 
 
-def alt(
-    function: Callable[[_SecondType], _UpdatedType],
-) -> Kinded[
-    Callable[
-        [KindN[_AltableKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[_AltableKind, _FirstType, _UpdatedType, _ThirdType],
-    ]
-]:
+def alt(function):
     """
     Lifts function to be wrapped in a container for better composition.
 
@@ -48,9 +39,7 @@ def alt(
     """
 
     @kinded
-    def factory(
-        container: KindN[_AltableKind, _FirstType, _SecondType, _ThirdType],
-    ) -> KindN[_AltableKind, _FirstType, _UpdatedType, _ThirdType]:
+    def factory(container):
         return container.alt(function)
 
     return factory
