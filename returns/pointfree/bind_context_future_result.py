@@ -1,42 +1,22 @@
-from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeVar
 
 from returns.interfaces.specific.reader_future_result import (
     ReaderFutureResultLikeN,
 )
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 if TYPE_CHECKING:
-    from returns.context import ReaderFutureResult  # noqa: WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ReaderFutureResultLikeKind = TypeVar(
-    '_ReaderFutureResultLikeKind',
-    bound=ReaderFutureResultLikeN,
+    '_ReaderFutureResultLikeKind', bound=ReaderFutureResultLikeN
 )
 
 
-def bind_context_future_result(
-    function: Callable[
-        [_FirstType],
-        'ReaderFutureResult[_UpdatedType, _SecondType, _ThirdType]',
-    ],
-) -> Kinded[
-    Callable[
-        [
-            KindN[
-                _ReaderFutureResultLikeKind, _FirstType, _SecondType, _ThirdType
-            ]
-        ],
-        KindN[
-            _ReaderFutureResultLikeKind, _UpdatedType, _SecondType, _ThirdType
-        ],
-    ]
-]:
+def bind_context_future_result(function):
     """
     Lifts function from ``RequiresContextFutureResult`` for better composition.
 
@@ -69,19 +49,7 @@ def bind_context_future_result(
     """
 
     @kinded
-    def factory(
-        container: KindN[
-            _ReaderFutureResultLikeKind,
-            _FirstType,
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _ReaderFutureResultLikeKind,
-        _UpdatedType,
-        _SecondType,
-        _ThirdType,
-    ]:
+    def factory(container):
         return container.bind_context_future_result(function)
 
     return factory

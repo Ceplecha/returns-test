@@ -1,5 +1,4 @@
 import sys
-from collections.abc import Callable, Iterator
 
 import pytest
 
@@ -7,10 +6,7 @@ from returns.trampolines import Trampoline, trampoline
 
 
 @trampoline
-def _accumulate(
-    numbers: Iterator[int],
-    acc: int = 0,
-) -> int | Trampoline[int]:
+def _accumulate(numbers, acc=0):
     number = next(numbers, None)
     if number is None:
         return acc
@@ -18,23 +14,14 @@ def _accumulate(
 
 
 @trampoline
-def _with_func_kwarg(
-    numbers: Iterator[int],
-    func: int = 0,  # we need this name to match `Trampoline` constructor
-) -> int | Trampoline[int]:
+def _with_func_kwarg(numbers, func=0):
     number = next(numbers, None)
     if number is None:
         return func
     return Trampoline(_with_func_kwarg, numbers, func=func + number)
 
 
-@pytest.mark.parametrize(
-    'trampoline_func',
-    [
-        _accumulate,
-        _with_func_kwarg,
-    ],
-)
+@pytest.mark.parametrize('trampoline_func', [_accumulate, _with_func_kwarg])
 @pytest.mark.parametrize(
     'given_range',
     [
@@ -46,11 +33,7 @@ def _with_func_kwarg(
         range(sys.getrecursionlimit() + 1),
     ],
 )
-def test_recursion_limit(
-    trampoline_func: Callable[[Iterator[int]], int],
-    given_range: range,
-) -> None:
+def test_recursion_limit(trampoline_func, given_range):
     """Test that accumulation is correct and no ``RecursionError`` happens."""
     accumulated = trampoline_func(iter(given_range))
-
     assert accumulated == sum(given_range)

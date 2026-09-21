@@ -13,23 +13,23 @@ from returns.pointfree import bind, map_
 from returns.result import Failure, Result, Success, safe
 
 
-def _increment(value: int) -> int:
+def _increment(value):
     return value + 1
 
 
-def _as_success(value: int) -> Result[int, str]:
+def _as_success(value):
     return Success(value + 1)
 
 
-def _as_some(value: int) -> Maybe[int]:
+def _as_some(value):
     return Some(value + 1)
 
 
-def test_result_map_chain(benchmark) -> None:
+def test_result_map_chain(benchmark):
     """A long chain of ``.map`` calls over a ``Result``."""
 
-    def run() -> Result[int, str]:
-        container: Result[int, str] = Success(0)
+    def run():
+        container = Success(0)
         for _ in range(100):
             container = container.map(_increment)
         return container
@@ -37,11 +37,11 @@ def test_result_map_chain(benchmark) -> None:
     assert benchmark(run) == Success(100)
 
 
-def test_result_bind_chain(benchmark) -> None:
+def test_result_bind_chain(benchmark):
     """A long chain of ``.bind`` calls over a ``Result``."""
 
-    def run() -> Result[int, str]:
-        container: Result[int, str] = Success(0)
+    def run():
+        container = Success(0)
         for _ in range(100):
             container = container.bind(_as_success)
         return container
@@ -49,58 +49,58 @@ def test_result_bind_chain(benchmark) -> None:
     assert benchmark(run) == Success(100)
 
 
-def test_result_do_notation(benchmark) -> None:
+def test_result_do_notation(benchmark):
     """Compose ``Result`` values through ``.do`` notation."""
 
-    def run() -> Result[int, str]:
+    def run():
         return Result.do(
-            first + second for first in Success(1) for second in Success(2)
+            (first + second for first in Success(1) for second in Success(2))
         )
 
     assert benchmark(run) == Success(3)
 
 
-def test_maybe_do_notation(benchmark) -> None:
+def test_maybe_do_notation(benchmark):
     """Compose ``Maybe`` values through ``.do`` notation."""
 
-    def run() -> Maybe[int]:
+    def run():
         return Maybe.do(
-            first + second for first in Some(1) for second in Some(2)
+            (first + second for first in Some(1) for second in Some(2))
         )
 
     assert benchmark(run) == Some(3)
 
 
-def test_result_failure_lash(benchmark) -> None:
+def test_result_failure_lash(benchmark):
     """Recover from a failure using ``.lash`` and ``.value_or``."""
     value = 42
 
-    def run() -> int:
-        container: Result[int, str] = Failure('boom')
+    def run():
+        container = Failure('boom')
         return container.lash(lambda _: Success(value)).value_or(0)
 
     assert benchmark(run) == value
 
 
-def test_safe_decorator(benchmark) -> None:
+def test_safe_decorator(benchmark):
     """The ``@safe`` decorator wrapping a raising function."""
 
     @safe
-    def _divide(numerator: int, denominator: int) -> float:
+    def _divide(numerator, denominator):
         return numerator / denominator
 
-    def run() -> Result[float, Exception]:
+    def run():
         return _divide(10, 0)
 
     result = benchmark(run)
     assert isinstance(result, Failure)
 
 
-def test_maybe_map_chain(benchmark) -> None:
+def test_maybe_map_chain(benchmark):
     """A long chain of ``.map`` calls over a ``Maybe``."""
 
-    def run() -> Maybe[int]:
-        container: Maybe[int] = Some(0)
+    def run():
+        container = Some(0)
         for _ in range(100):
             container = container.map(_increment)
         return container
@@ -108,21 +108,21 @@ def test_maybe_map_chain(benchmark) -> None:
     assert benchmark(run) == Some(100)
 
 
-def test_maybe_bind_nothing(benchmark) -> None:
+def test_maybe_bind_nothing(benchmark):
     """Short-circuiting a ``Maybe`` chain through ``Nothing``."""
 
-    def run() -> int:
-        container: Maybe[int] = Some(1)
+    def run():
+        container = Some(1)
         container = container.bind(lambda _: Nothing)
         return container.bind(_as_some).value_or(-1)
 
     assert benchmark(run) == -1
 
 
-def test_io_map_chain(benchmark) -> None:
+def test_io_map_chain(benchmark):
     """A long chain of ``.map`` calls over an ``IO`` container."""
 
-    def run() -> IO[int]:
+    def run():
         container = IO(0)
         for _ in range(100):
             container = container.map(_increment)
@@ -131,25 +131,22 @@ def test_io_map_chain(benchmark) -> None:
     assert benchmark(run) == IO(100)
 
 
-def test_flow_pipeline(benchmark) -> None:
+def test_flow_pipeline(benchmark):
     """Compose containers through ``flow`` with point-free helpers."""
 
-    def run() -> Result[int, str]:
+    def run():
         return flow(
-            Success(1),
-            map_(_increment),
-            bind(_as_success),
-            map_(_increment),
+            Success(1), map_(_increment), bind(_as_success), map_(_increment)
         )
 
     assert benchmark(run) == Success(4)
 
 
-def test_fold_collect_results(benchmark) -> None:
+def test_fold_collect_results(benchmark):
     """Fold an iterable of ``Result`` values into a single container."""
     items = [Success(index) for index in range(100)]
 
-    def run() -> Result[tuple[int, ...], str]:
+    def run():
         return Fold.collect(items, Success(()))
 
     assert benchmark(run) == Success(tuple(range(100)))
