@@ -1,28 +1,16 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.lashable import LashableN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _LashableKind = TypeVar('_LashableKind', bound=LashableN)
 
 
-def lash(
-    function: Callable[
-        [_SecondType],
-        KindN[_LashableKind, _FirstType, _UpdatedType, _ThirdType],
-    ],
-) -> Kinded[
-    Callable[
-        [KindN[_LashableKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[_LashableKind, _FirstType, _UpdatedType, _ThirdType],
-    ]
-]:
+def lash(function):
     """
     Turns function's input parameter from a regular value to a container.
 
@@ -53,9 +41,7 @@ def lash(
     """
 
     @kinded
-    def factory(
-        container: KindN[_LashableKind, _FirstType, _SecondType, _ThirdType],
-    ) -> KindN[_LashableKind, _FirstType, _UpdatedType, _ThirdType]:
+    def factory(container):
         return container.lash(function)
 
     return factory

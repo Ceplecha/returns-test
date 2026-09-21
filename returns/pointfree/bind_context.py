@@ -1,34 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeVar
 
 from returns.interfaces.specific.reader import ReaderLike2, ReaderLike3
-from returns.primitives.hkt import Kind2, Kind3, Kinded, kinded
+from returns.primitives.hkt import kinded
 
 if TYPE_CHECKING:
-    from returns.context import RequiresContext  # noqa: WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _Reader2Kind = TypeVar('_Reader2Kind', bound=ReaderLike2)
 _Reader3Kind = TypeVar('_Reader3Kind', bound=ReaderLike3)
 
 
-def bind_context2(
-    function: Callable[
-        [_FirstType],
-        RequiresContext[_UpdatedType, _SecondType],
-    ],
-) -> Kinded[
-    Callable[
-        [Kind2[_Reader2Kind, _FirstType, _SecondType]],
-        Kind2[_Reader2Kind, _UpdatedType, _SecondType],
-    ]
-]:
+def bind_context2(function):
     """
     Composes successful container with a function that returns a container.
 
@@ -56,25 +43,13 @@ def bind_context2(
     """
 
     @kinded
-    def factory(
-        container: Kind2[_Reader2Kind, _FirstType, _SecondType],
-    ) -> Kind2[_Reader2Kind, _UpdatedType, _SecondType]:
+    def factory(container):
         return container.bind_context(function)
 
     return factory
 
 
-def bind_context3(
-    function: Callable[
-        [_FirstType],
-        RequiresContext[_UpdatedType, _ThirdType],
-    ],
-) -> Kinded[
-    Callable[
-        [Kind3[_Reader3Kind, _FirstType, _SecondType, _ThirdType]],
-        Kind3[_Reader3Kind, _UpdatedType, _SecondType, _ThirdType],
-    ]
-]:
+def bind_context3(function):
     """
     Composes successful container with a function that returns a container.
 
@@ -106,13 +81,10 @@ def bind_context3(
     """
 
     @kinded
-    def factory(
-        container: Kind3[_Reader3Kind, _FirstType, _SecondType, _ThirdType],
-    ) -> Kind3[_Reader3Kind, _UpdatedType, _SecondType, _ThirdType]:
+    def factory(container):
         return container.bind_context(function)
 
     return factory
 
 
-#: Useful alias for :func:`~bind_context3`.
 bind_context = bind_context3
