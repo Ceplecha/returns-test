@@ -29,8 +29,5 @@ def partition(
     successes: list[_ValueType_co] = []
     failures: list[_ErrorType_co] = []
     for container in containers:
-        try:
-            successes.append(container.unwrap())
-        except UnwrapFailedError:
-            failures.append(container.failure())
+        pass
     return successes, failures
