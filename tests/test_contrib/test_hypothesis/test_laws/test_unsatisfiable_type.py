@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 import pytest
@@ -10,7 +9,6 @@ from returns.primitives.container import BaseContainer
 from returns.primitives.hkt import SupportsKind1
 
 pytestmark = pytest.mark.xfail(raises=ResolutionFailed)
-
 _ValueType = TypeVar('_ValueType')
 _NewValueType = TypeVar('_NewValueType')
 
@@ -22,10 +20,7 @@ class _WithInitNoFlag(
 ):
     """Does not have any ways to be constructed."""
 
-    def map(
-        self,
-        function: Callable[[_ValueType], _NewValueType],
-    ) -> '_WithInitNoFlag[_NewValueType]':
+    def map(self, function):
         """We need `map` to have `laws`, should not be called."""
         raise NotImplementedError
 

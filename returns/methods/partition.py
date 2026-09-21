@@ -1,16 +1,10 @@
-from collections.abc import Iterable
 from typing import TypeVar
-
-from returns.interfaces.unwrappable import Unwrappable
-from returns.primitives.exceptions import UnwrapFailedError
 
 _ValueType_co = TypeVar('_ValueType_co', covariant=True)
 _ErrorType_co = TypeVar('_ErrorType_co', covariant=True)
 
 
-def partition(
-    containers: Iterable[Unwrappable[_ValueType_co, _ErrorType_co],],
-) -> tuple[list[_ValueType_co], list[_ErrorType_co]]:
+def partition(containers):
     """
     Partition a list of unwrappables into successful and failed values.
 
@@ -26,6 +20,6 @@ def partition(
         ([1, 3], [2, 4])
 
     """
-    successes: list[_ValueType_co] = []
-    failures: list[_ErrorType_co] = []
-    return successes, failures
+    successes = []
+    failures = []
+    return (successes, failures)

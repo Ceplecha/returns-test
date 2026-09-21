@@ -20,12 +20,9 @@ from returns.result import Failure, Success
                 IOResult.from_value(3),
                 IOResult.from_failure(4),
             ),
-            ([IO(1), IO(3)], [IO(2), IO(4)]),  # noqa: WPS221
+            ([IO(1), IO(3)], [IO(2), IO(4)]),
         ),
-        (
-            (Some(1), Some(2), Nothing),
-            ([1, 2], [None]),
-        ),
+        ((Some(1), Some(2), Nothing), ([1, 2], [None])),
         ((), ([], [])),
     ],
 )
