@@ -561,9 +561,6 @@ def safe(  # noqa: WPS234
                 return Failure(exc)
 
         return decorator
-
-    if isinstance(exceptions, tuple):
-        return lambda function: factory(function, exceptions)
     return factory(
         exceptions,
         (Exception,),  # type: ignore[arg-type]
