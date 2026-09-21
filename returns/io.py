@@ -979,9 +979,6 @@ def impure_safe(  # noqa: WPS234
                 return IOFailure(exc)
 
         return decorator
-
-    if isinstance(exceptions, tuple):
-        return lambda function: factory(function, exceptions)
     return factory(
         exceptions,
         (Exception,),  # type: ignore[arg-type]
