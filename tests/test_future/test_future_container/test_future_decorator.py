@@ -6,7 +6,7 @@ from returns.io import IO
 
 
 @future
-async def _coro(arg: int) -> float:
+async def _coro(arg):
     assert isinstance(arg, int)
     await anyio.sleep(0)
     return arg / 2
@@ -16,6 +16,5 @@ async def _coro(arg: int) -> float:
 async def test_safe_decorator():
     """Ensure that coroutine marked with ``@future`` returns ``Future``."""
     future_instance = _coro(1)
-
     assert isinstance(future_instance, Future)
     assert await future_instance == IO(0.5)

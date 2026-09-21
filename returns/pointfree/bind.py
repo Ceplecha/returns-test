@@ -1,28 +1,16 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.bindable import BindableN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _BindableKind = TypeVar('_BindableKind', bound=BindableN)
 
 
-def bind(
-    function: Callable[
-        [_FirstType],
-        KindN[_BindableKind, _UpdatedType, _SecondType, _ThirdType],
-    ],
-) -> Kinded[
-    Callable[
-        [KindN[_BindableKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[_BindableKind, _UpdatedType, _SecondType, _ThirdType],
-    ]
-]:
+def bind(function):
     """
     Turns function's input parameter from a regular value to a container.
 
@@ -53,9 +41,7 @@ def bind(
     """
 
     @kinded
-    def factory(
-        container: KindN[_BindableKind, _FirstType, _SecondType, _ThirdType],
-    ) -> KindN[_BindableKind, _UpdatedType, _SecondType, _ThirdType]:
+    def factory(container):
         return container.bind(function)
 
     return factory

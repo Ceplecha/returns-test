@@ -1,25 +1,16 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.specific.maybe import MaybeLikeN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _MaybeLikeKind = TypeVar('_MaybeLikeKind', bound=MaybeLikeN)
 
 
-def bind_optional(
-    function: Callable[[_FirstType], _UpdatedType | None],
-) -> Kinded[
-    Callable[
-        [KindN[_MaybeLikeKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[_MaybeLikeKind, _UpdatedType, _SecondType, _ThirdType],
-    ]
-]:
+def bind_optional(function):
     """
     Binds a function returning optional value over a container.
 
@@ -50,9 +41,7 @@ def bind_optional(
     """
 
     @kinded
-    def factory(
-        container: KindN[_MaybeLikeKind, _FirstType, _SecondType, _ThirdType],
-    ) -> KindN[_MaybeLikeKind, _UpdatedType, _SecondType, _ThirdType]:
+    def factory(container):
         return container.bind_optional(function)
 
     return factory

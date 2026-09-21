@@ -1,48 +1,23 @@
-from collections.abc import Callable
 from typing import TypeVar, overload
 
-from returns.context import NoDeps
 from returns.interfaces.failable import DiverseFailableN, SingleFailableN
 from returns.methods.cond import internal_cond
-from returns.primitives.hkt import Kinded, KindN
 
 _ValueType = TypeVar('_ValueType')
 _ErrorType = TypeVar('_ErrorType')
-
 _DiverseFailableKind = TypeVar('_DiverseFailableKind', bound=DiverseFailableN)
 _SingleFailableKind = TypeVar('_SingleFailableKind', bound=SingleFailableN)
 
 
 @overload
-def cond(
-    container_type: type[_SingleFailableKind],
-    success_value: _ValueType,
-) -> Kinded[
-    Callable[
-        [bool],
-        KindN[_SingleFailableKind, _ValueType, _ErrorType, NoDeps],
-    ]
-]: ...
+def cond(container_type, success_value): ...
 
 
 @overload
-def cond(
-    container_type: type[_DiverseFailableKind],
-    success_value: _ValueType,
-    error_value: _ErrorType,
-) -> Kinded[
-    Callable[
-        [bool],
-        KindN[_DiverseFailableKind, _ValueType, _ErrorType, NoDeps],
-    ]
-]: ...
+def cond(container_type, success_value, error_value): ...
 
 
-def cond(
-    container_type: (type[_SingleFailableKind] | type[_DiverseFailableKind]),
-    success_value: _ValueType,
-    error_value: _ErrorType | None = None,
-):
+def cond(container_type, success_value, error_value=None):
     """
     Reduce the boilerplate when choosing paths.
 
@@ -70,12 +45,9 @@ def cond(
 
     """
 
-    def factory(is_success: bool):  # noqa: FBT001
+    def factory(is_success):
         return internal_cond(
-            container_type,
-            is_success,
-            success_value,
-            error_value,
+            container_type, is_success, success_value, error_value
         )
 
     return factory

@@ -1,5 +1,3 @@
-from collections.abc import Sequence
-
 import pytest
 
 from returns.context import (
@@ -8,15 +6,13 @@ from returns.context import (
     ReaderIOResult,
     ReaderResult,
 )
-from returns.contrib.pytest import ReturnsAsserts
 from returns.future import Future, FutureResult
 from returns.io import IO, IOResult
 from returns.maybe import Maybe
 from returns.primitives.asserts import assert_equal
-from returns.primitives.container import BaseContainer
 from returns.result import Result
 
-_containers: Sequence[BaseContainer] = (
+_containers = (
     Result.from_failure(1),
     Result.from_value(1),
     IO(1),
@@ -39,42 +35,30 @@ _containers: Sequence[BaseContainer] = (
 
 
 @pytest.mark.parametrize('container', _containers)
-def test_assert_equal(container, anyio_backend_name: str):
+def test_assert_equal(container, anyio_backend_name):
     """Ensure that containers can be equal."""
     assert_equal(container, container, backend=anyio_backend_name)
 
 
 @pytest.mark.parametrize('container', _containers)
-def test_assert_equal_plugin(
-    container,
-    anyio_backend_name: str,
-    returns: ReturnsAsserts,
-):
+def test_assert_equal_plugin(container, anyio_backend_name, returns):
     """Ensure that containers can be equal."""
     returns.assert_equal(container, container, backend=anyio_backend_name)
 
 
 @pytest.mark.parametrize('container', _containers)
-def test_assert_equal_not(container, anyio_backend_name: str):
+def test_assert_equal_not(container, anyio_backend_name):
     """Ensure that containers can be not equal."""
     with pytest.raises(AssertionError):
         assert_equal(
-            container,
-            container.from_value(2),
-            backend=anyio_backend_name,
+            container, container.from_value(2), backend=anyio_backend_name
         )
 
 
 @pytest.mark.parametrize('container', _containers)
-def test_assert_equal_not_plugin(
-    container,
-    anyio_backend_name: str,
-    returns: ReturnsAsserts,
-):
+def test_assert_equal_not_plugin(container, anyio_backend_name, returns):
     """Ensure that containers can be not equal."""
     with pytest.raises(AssertionError):
         returns.assert_equal(
-            container,
-            container.from_value(2),
-            backend=anyio_backend_name,
+            container, container.from_value(2), backend=anyio_backend_name
         )
