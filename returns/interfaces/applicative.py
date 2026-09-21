@@ -1,13 +1,10 @@
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import ClassVar, Never, TypeVar, final
+from typing import Never, TypeVar, final
 
 from returns.functions import compose, identity
 from returns.interfaces import mappable
 from returns.primitives.asserts import assert_equal
-from returns.primitives.hkt import KindN
 from returns.primitives.laws import (
-    Law,
     Law1,
     Law3,
     Lawful,
@@ -19,10 +16,7 @@ _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ApplicativeType = TypeVar('_ApplicativeType', bound='ApplicativeN')
-
-# Only used in laws:
 _NewType1 = TypeVar('_NewType1')
 _NewType2 = TypeVar('_NewType2')
 
@@ -39,26 +33,17 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def identity_law(
-        container: 'ApplicativeN[_FirstType, _SecondType, _ThirdType]',
-    ) -> None:
+    def identity_law(container):
         """
         Identity law.
 
         If we apply wrapped ``identity`` function to a container,
         nothing happens.
         """
-        assert_equal(
-            container,
-            container.apply(container.from_value(identity)),
-        )
+        assert_equal(container, container.apply(container.from_value(identity)))
 
     @law_definition
-    def interchange_law(
-        raw_value: _FirstType,
-        container: 'ApplicativeN[_FirstType, _SecondType, _ThirdType]',
-        function: Callable[[_FirstType], _NewType1],
-    ) -> None:
+    def interchange_law(raw_value, container, function):
         """
         Interchange law.
 
@@ -69,19 +54,15 @@ class _LawSpec(LawSpecDef):
         """
         assert_equal(
             container.from_value(raw_value).apply(
-                container.from_value(function),
+                container.from_value(function)
             ),
             container.from_value(function).apply(
-                container.from_value(lambda inner: inner(raw_value)),
+                container.from_value(lambda inner: inner(raw_value))
             ),
         )
 
     @law_definition
-    def homomorphism_law(
-        raw_value: _FirstType,
-        container: 'ApplicativeN[_FirstType, _SecondType, _ThirdType]',
-        function: Callable[[_FirstType], _NewType1],
-    ) -> None:
+    def homomorphism_law(raw_value, container, function):
         """
         Homomorphism law.
 
@@ -93,16 +74,12 @@ class _LawSpec(LawSpecDef):
         assert_equal(
             container.from_value(function(raw_value)),
             container.from_value(raw_value).apply(
-                container.from_value(function),
+                container.from_value(function)
             ),
         )
 
     @law_definition
-    def composition_law(
-        container: 'ApplicativeN[_FirstType, _SecondType, _ThirdType]',
-        first: Callable[[_FirstType], _NewType1],
-        second: Callable[[_NewType1], _NewType2],
-    ) -> None:
+    def composition_law(container, first, second):
         """
         Composition law.
 
@@ -111,10 +88,8 @@ class _LawSpec(LawSpecDef):
         """
         assert_equal(
             container.apply(container.from_value(compose(first, second))),
-            container.apply(
-                container.from_value(first),
-            ).apply(
-                container.from_value(second),
+            container.apply(container.from_value(first)).apply(
+                container.from_value(second)
             ),
         )
 
@@ -133,8 +108,7 @@ class ApplicativeN(
     """
 
     __slots__ = ()
-
-    _laws: ClassVar[Sequence[Law]] = (
+    _laws = (
         Law1(_LawSpec.identity_law),
         Law3(_LawSpec.interchange_law),
         Law3(_LawSpec.homomorphism_law),
@@ -142,31 +116,15 @@ class ApplicativeN(
     )
 
     @abstractmethod
-    def apply(
-        self: _ApplicativeType,
-        container: KindN[
-            _ApplicativeType,
-            Callable[[_FirstType], _UpdatedType],
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[_ApplicativeType, _UpdatedType, _SecondType, _ThirdType]:
+    def apply(self, container):
         """Allows to apply a wrapped function over a container."""
 
     @classmethod
     @abstractmethod
-    def from_value(
-        cls: type[_ApplicativeType],
-        inner_value: _UpdatedType,
-    ) -> KindN[_ApplicativeType, _UpdatedType, _SecondType, _ThirdType]:
+    def from_value(cls, inner_value):
         """Unit method to create new containers from any raw value."""
 
 
-#: Type alias for kinds with one type argument.
 Applicative1 = ApplicativeN[_FirstType, Never, Never]
-
-#: Type alias for kinds with two type arguments.
 Applicative2 = ApplicativeN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 Applicative3 = ApplicativeN[_FirstType, _SecondType, _ThirdType]

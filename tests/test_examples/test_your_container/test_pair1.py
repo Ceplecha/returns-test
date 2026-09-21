@@ -1,13 +1,11 @@
-from collections.abc import Callable
 from typing import TypeVar, final
 
 from returns.interfaces import bindable, equable, lashable, swappable
 from returns.primitives.container import BaseContainer, container_equality
-from returns.primitives.hkt import Kind2, SupportsKind2, dekind
+from returns.primitives.hkt import SupportsKind2, dekind
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
-
 _NewFirstType = TypeVar('_NewFirstType')
 _NewSecondType = TypeVar('_NewSecondType')
 
@@ -29,56 +27,23 @@ class Pair(
 
     """
 
-    def __init__(
-        self,
-        inner_value: tuple[_FirstType, _SecondType],
-    ) -> None:
+    def __init__(self, inner_value):
         """Saves passed tuple as ``._inner_value`` inside this instance."""
         super().__init__(inner_value)
 
-    # `Equable` part:
+    equals = container_equality
 
-    equals = container_equality  # we already have this defined for all types
-
-    # `Mappable` part via `BiMappable`:
-
-    def map(
-        self,
-        function: Callable[[_FirstType], _NewFirstType],
-    ) -> 'Pair[_NewFirstType, _SecondType]':
+    def map(self, function):
         return Pair((function(self._inner_value[0]), self._inner_value[1]))
 
-    # `BindableN` part:
-
-    def bind(
-        self,
-        function: Callable[
-            [_FirstType],
-            Kind2['Pair', _NewFirstType, _SecondType],
-        ],
-    ) -> 'Pair[_NewFirstType, _SecondType]':
+    def bind(self, function):
         return dekind(function(self._inner_value[0]))
 
-    # `AltableN` part via `BiMappableN`:
-
-    def alt(
-        self,
-        function: Callable[[_SecondType], _NewSecondType],
-    ) -> 'Pair[_FirstType, _NewSecondType]':
+    def alt(self, function):
         return Pair((self._inner_value[0], function(self._inner_value[1])))
 
-    # `LashableN` part:
-
-    def lash(
-        self,
-        function: Callable[
-            [_SecondType],
-            Kind2['Pair', _FirstType, _NewSecondType],
-        ],
-    ) -> 'Pair[_FirstType, _NewSecondType]':
+    def lash(self, function):
         return dekind(function(self._inner_value[1]))
 
-    # `SwappableN` part:
-
-    def swap(self) -> 'Pair[_SecondType, _FirstType]':
+    def swap(self):
         return Pair((self._inner_value[1], self._inner_value[0]))

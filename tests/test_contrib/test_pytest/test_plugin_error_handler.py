@@ -5,18 +5,13 @@ from returns.context import (
     RequiresContextIOResult,
     RequiresContextResult,
 )
-from returns.contrib.pytest import ReturnsAsserts
 from returns.functions import identity
 from returns.future import FutureResult
 from returns.io import IOFailure, IOSuccess
 from returns.result import Failure, Success
 
 
-def _under_test(
-    container,
-    *,
-    should_lash: bool = False,
-):
+def _under_test(container, *, should_lash=False):
     if should_lash:
         return container.lash(container.from_failure)
     return container.bind(container.from_value)
@@ -39,22 +34,15 @@ def _under_test(
         FutureResult.from_failure(1),
     ],
 )
-@pytest.mark.parametrize(
-    'kwargs',
-    [
-        {'should_lash': True},
-    ],
-)
-def test_error_handled(returns: ReturnsAsserts, container, kwargs):
+@pytest.mark.parametrize('kwargs', [{'should_lash': True}])
+def test_error_handled(returns, container, kwargs):
     """Demo on how to use ``pytest`` helpers to work with error handling."""
-    assert not returns._errors_handled  # noqa: SLF001
+    assert not returns._errors_handled
     error_handled = _under_test(container, **kwargs)
-
     assert returns.is_error_handled(error_handled)
     assert returns.is_error_handled(error_handled.map(identity))
     assert returns.is_error_handled(error_handled.alt(identity))
-
-    assert returns._errors_handled  # noqa: SLF001
+    assert returns._errors_handled
 
 
 @pytest.mark.parametrize(
@@ -72,17 +60,15 @@ def test_error_handled(returns: ReturnsAsserts, container, kwargs):
         RequiresContextResult.from_failure(1),
     ],
 )
-def test_error_not_handled(returns: ReturnsAsserts, container):
+def test_error_not_handled(returns, container):
     """Demo on how to use ``pytest`` helpers to work with error handling."""
-    assert not returns._errors_handled  # noqa: SLF001
+    assert not returns._errors_handled
     error_handled = _under_test(container)
-
     assert not returns.is_error_handled(container)
     assert not returns.is_error_handled(error_handled)
     assert not returns.is_error_handled(error_handled.map(identity))
     assert not returns.is_error_handled(error_handled.alt(identity))
-
-    assert not returns._errors_handled  # noqa: SLF001
+    assert not returns._errors_handled
 
 
 @pytest.mark.anyio
@@ -95,10 +81,9 @@ def test_error_not_handled(returns: ReturnsAsserts, container):
         RequiresContextFutureResult.from_failure(1),
     ],
 )
-async def test_error_not_handled_async(returns: ReturnsAsserts, container):
+async def test_error_not_handled_async(returns, container):
     """Demo on how to use ``pytest`` helpers to work with error handling."""
     error_handled = _under_test(container)
-
     assert not returns.is_error_handled(container)
     assert not returns.is_error_handled(error_handled)
     assert not returns.is_error_handled(error_handled.map(identity))
