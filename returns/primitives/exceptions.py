@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from returns.interfaces.unwrappable import Unwrappable  # noqa: WPS433
+    pass
 
 
 class UnwrapFailedError(Exception):
@@ -11,7 +11,7 @@ class UnwrapFailedError(Exception):
 
     __slots__ = ('halted_container',)
 
-    def __init__(self, container: Unwrappable) -> None:
+    def __init__(self, container):
         """
         Saves halted container in the inner state.
 
@@ -21,15 +21,12 @@ class UnwrapFailedError(Exception):
         super().__init__()
         self.halted_container = container
 
-    def __reduce__(self):  # noqa: WPS603
+    def __reduce__(self):
         """Custom reduce method for pickle protocol.
 
         This helps properly reconstruct the exception during unpickling.
         """
-        return (
-            self.__class__,  # callable
-            (self.halted_container,),  # args to callable
-        )
+        return (self.__class__, (self.halted_container,))
 
 
 class ImmutableStateError(AttributeError):

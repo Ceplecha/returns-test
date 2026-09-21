@@ -6,10 +6,7 @@ _PipelineStepType = TypeVar('_PipelineStepType')
 _ReturnType = TypeVar('_ReturnType')
 
 
-def flow(
-    instance: _InstanceType,
-    *functions: _PipelineStepType,
-) -> _ReturnType:  # type: ignore[type-var]
+def flow(instance, *functions):
     """
     Allows to compose a value and up to multiple functions that use this value.
 
@@ -47,8 +44,6 @@ def flow(
 
     Requires our :ref:`mypy plugin <mypy-plugins>`.
     """
-    return reduce(  # type: ignore
-        lambda composed, function: function(composed),  # type: ignore
-        functions,
-        instance,
+    return reduce(
+        lambda composed, function: function(composed), functions, instance
     )
