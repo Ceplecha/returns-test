@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from functools import wraps
 from typing import Generic, TypeVar, final
 
@@ -18,26 +17,18 @@ class Trampoline(Generic[_ReturnType]):
 
     __slots__ = ('args', 'func', 'kwargs')
 
-    def __init__(  # noqa: WPS451
-        self,
-        func: Callable[_FuncParams, _ReturnType],
-        /,  # We use pos-only here to be able to store `kwargs` correctly.
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> None:
+    def __init__(self, func, /, *args, **kwargs):
         """Save function and given arguments."""
         self.func = getattr(func, '_orig_func', func)
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self) -> _ReturnType:
+    def __call__(self):
         """Call wrapped function with given arguments."""
         return self.func(*self.args, **self.kwargs)
 
 
-def trampoline(
-    func: Callable[_FuncParams, _ReturnType | Trampoline[_ReturnType]],
-) -> Callable[_FuncParams, _ReturnType]:
+def trampoline(func):
     """
     Convert functions using recursion to regular functions.
 
@@ -82,14 +73,11 @@ def trampoline(
     """
 
     @wraps(func)
-    def decorator(
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> _ReturnType:
+    def decorator(*args, **kwargs):
         trampoline_result = func(*args, **kwargs)
         while isinstance(trampoline_result, Trampoline):
             trampoline_result = trampoline_result()
         return trampoline_result
 
-    decorator._orig_func = func  # type: ignore[attr-defined]  # noqa: SLF001
+    decorator._orig_func = func
     return decorator

@@ -1,11 +1,9 @@
 from typing import TypeVar
 
-from returns.io import IO
-
 _ValueType = TypeVar('_ValueType')
 
 
-def unsafe_perform_io(wrapped_in_io: IO[_ValueType]) -> _ValueType:
+def unsafe_perform_io(wrapped_in_io):
     """
     Compatibility utility and escape mechanism from ``IO`` world.
 
@@ -28,4 +26,4 @@ def unsafe_perform_io(wrapped_in_io: IO[_ValueType]) -> _ValueType:
         - https://github.com/seddonym/import-linter
 
     """
-    return wrapped_in_io._inner_value  # noqa: SLF001
+    return wrapped_in_io._inner_value

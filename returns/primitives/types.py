@@ -1,5 +1,3 @@
-from typing import Any, Never, Self
-
 from returns.primitives.exceptions import ImmutableStateError
 
 
@@ -29,18 +27,18 @@ class Immutable:
 
     __slots__ = ()
 
-    def __copy__(self) -> Self:
+    def __copy__(self):
         """Returns itself."""
         return self
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
+    def __deepcopy__(self, memo):
         """Returns itself."""
         return self
 
-    def __setattr__(self, attr_name: str, attr_value: Any) -> Never:
+    def __setattr__(self, attr_name, attr_value):
         """Makes inner state of the containers immutable for modification."""
         raise ImmutableStateError
 
-    def __delattr__(self, attr_name: str) -> Never:  # noqa: WPS603
+    def __delattr__(self, attr_name):
         """Makes inner state of the containers immutable for deletion."""
         raise ImmutableStateError

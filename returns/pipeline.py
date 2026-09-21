@@ -7,8 +7,7 @@ from returns.interfaces.unwrappable import Unwrappable
 from returns.primitives.exceptions import UnwrapFailedError
 
 
-# TODO: add overloads for specific types, so it can narrow them with `TypeIs`
-def is_successful(container: Unwrappable[Any, Any]) -> bool:
+def is_successful(container):
     """
     Determines if a container was successful or not.
 

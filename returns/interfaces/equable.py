@@ -1,9 +1,7 @@
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import ClassVar, TypeVar, final
+from typing import TypeVar, final
 
 from returns.primitives.laws import (
-    Law,
     Law1,
     Law2,
     Law3,
@@ -26,29 +24,18 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def reflexive_law(
-        first: _EqualType,
-    ) -> None:
+    def reflexive_law(first):
         """Value should be equal to itself."""
         assert first.equals(first)
 
     @law_definition
-    def symmetry_law(
-        first: _EqualType,
-        second: _EqualType,
-    ) -> None:
+    def symmetry_law(first, second):
         """If ``A == B`` then ``B == A``."""
         assert first.equals(second) == second.equals(first)
 
     @law_definition
-    def transitivity_law(
-        first: _EqualType,
-        second: _EqualType,
-        third: _EqualType,
-    ) -> None:
+    def transitivity_law(first, second, third):
         """If ``A == B`` and ``B == C`` then ``A == C``."""
-        # We use this notation, because `first` might be equal to `third`,
-        # but not to `second`. Example: Some(1), Some(2), Some(1)
         if first.equals(second) and second.equals(third):
             assert first.equals(third)
 
@@ -64,13 +51,12 @@ class Equable(Lawful['Equable']):
     """
 
     __slots__ = ()
-
-    _laws: ClassVar[Sequence[Law]] = (
+    _laws = (
         Law1(_LawSpec.reflexive_law),
         Law2(_LawSpec.symmetry_law),
         Law3(_LawSpec.transitivity_law),
     )
 
     @abstractmethod
-    def equals(self: _EqualType, other: _EqualType) -> bool:
+    def equals(self, other):
         """Type-safe equality check for values of the same type."""

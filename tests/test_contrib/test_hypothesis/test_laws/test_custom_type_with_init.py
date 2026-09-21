@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.contrib.hypothesis.laws import check_all_laws
@@ -16,17 +15,12 @@ class _Wrapper(
     mappable.Mappable1[_ValueType],
     equable.Equable,
 ):
-    _inner_value: _ValueType
-
-    def __init__(self, inner_value: _ValueType) -> None:
+    def __init__(self, inner_value):
         super().__init__(inner_value)
 
     equals = container_equality
 
-    def map(
-        self,
-        function: Callable[[_ValueType], _NewValueType],
-    ) -> '_Wrapper[_NewValueType]':
+    def map(self, function):
         return _Wrapper(function(self._inner_value))
 
 

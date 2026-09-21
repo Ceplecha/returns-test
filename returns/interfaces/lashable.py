@@ -1,14 +1,10 @@
 from abc import abstractmethod
-from collections.abc import Callable
 from typing import Generic, Never, TypeVar
-
-from returns.primitives.hkt import KindN
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _LashableType = TypeVar('_LashableType', bound='LashableN')
 
 
@@ -27,13 +23,7 @@ class LashableN(Generic[_FirstType, _SecondType, _ThirdType]):
     __slots__ = ()
 
     @abstractmethod
-    def lash(
-        self: _LashableType,
-        function: Callable[
-            [_SecondType],
-            KindN[_LashableType, _FirstType, _UpdatedType, _ThirdType],
-        ],
-    ) -> KindN[_LashableType, _FirstType, _UpdatedType, _ThirdType]:
+    def lash(self, function):
         """
         Applies 'function' to the result of a previous calculation.
 
@@ -41,8 +31,5 @@ class LashableN(Generic[_FirstType, _SecondType, _ThirdType]):
         """
 
 
-#: Type alias for kinds with two type arguments.
 Lashable2 = LashableN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 Lashable3 = LashableN[_FirstType, _SecondType, _ThirdType]

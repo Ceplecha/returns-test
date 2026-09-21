@@ -1,28 +1,17 @@
 import inspect
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from contextlib import ExitStack, contextmanager
 from functools import partial, wraps
-from types import FrameType, MappingProxyType
-from typing import TYPE_CHECKING, Any, Final, TypeAlias, TypeVar, Union, final
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, TypeVar, Union, final
 from unittest import mock
 
 import pytest
 
 if TYPE_CHECKING:
     from returns.interfaces.specific.result import ResultLikeN
-
-# We keep track of errors handled by keeping a mapping of <object id>: object.
-# If an error is handled, it is in the mapping.
-# If it isn't in the mapping, the error is not handled.
-#
-# Note only storing object IDs would not work, as objects may be GC'ed
-# and their object id assigned to another object.
-# Also, the object itself cannot be (in) the key because
-# (1) we cannot always assume hashability and
-# (2) we need to track the object identity, not its value
-_ErrorsHandled: TypeAlias = dict[int, Any]
-
+_ErrorsHandled = dict[int, Any]
 _FunctionType = TypeVar('_FunctionType', bound=Callable)
 _ReturnsResultType = TypeVar(
     '_ReturnsResultType',
@@ -36,33 +25,24 @@ class ReturnsAsserts:
 
     __slots__ = ('_errors_handled',)
 
-    def __init__(self, errors_handled: _ErrorsHandled) -> None:
+    def __init__(self, errors_handled):
         """Constructor for this type."""
         self._errors_handled = errors_handled
 
-    @staticmethod  # noqa: WPS602
-    def assert_equal(  # noqa: WPS602
-        first,
-        second,
-        *,
-        deps=None,
-        backend: str = 'asyncio',
-    ) -> None:
+    @staticmethod
+    def assert_equal(first, second, *, deps=None, backend='asyncio'):
         """Can compare two containers even with extra calling and awaiting."""
-        from returns.primitives.asserts import assert_equal  # noqa: PLC0415
+        from returns.primitives.asserts import assert_equal
 
         assert_equal(first, second, deps=deps, backend=backend)
 
-    def is_error_handled(self, container) -> bool:
+    def is_error_handled(self, container):
         """Ensures that container has its error handled in the end."""
         return id(container) in self._errors_handled
 
-    @staticmethod  # noqa: WPS602
+    @staticmethod
     @contextmanager
-    def assert_trace(  # noqa: WPS602
-        trace_type: _ReturnsResultType,
-        function_to_search: _FunctionType,
-    ) -> Iterator[None]:
+    def assert_trace(trace_type, function_to_search):
         """
         Ensures that a given function was called during execution.
 
@@ -70,34 +50,20 @@ class ReturnsAsserts:
         """
         old_tracer = sys.gettrace()
         sys.settrace(partial(_trace_function, trace_type, function_to_search))
-
         try:
             yield
         except _DesiredFunctionFound:
-            pass  # noqa: WPS420
+            pass
         else:
-            pytest.fail(
-                f'No container {type(trace_type).__name__} was created',
-            )
+            pytest.fail(f'No container {type(trace_type).__name__} was created')
         finally:
             sys.settrace(old_tracer)
 
 
-def _trace_function(
-    trace_type: _ReturnsResultType,
-    function_to_search: _FunctionType,
-    frame: FrameType,
-    event: str,
-    arg: Any,
-) -> None:
+def _trace_function(trace_type, function_to_search, frame, event, arg):
     is_desired_type_call = event == 'call' and (
-        # Some containers is created through functions and others
-        # is created directly using class constructors!
-        # The first line covers when it's created through a function
-        # The second line covers when it's created through a
-        # class constructor
         frame.f_code is getattr(trace_type, '__code__', None)
-        or frame.f_code is getattr(trace_type.__init__, '__code__', None)  # type: ignore[misc]
+        or frame.f_code is getattr(trace_type.__init__, '__code__', None)
     )
     if is_desired_type_call:
         current_call_stack = inspect.stack()
@@ -107,11 +73,11 @@ def _trace_function(
                 raise _DesiredFunctionFound
 
 
-class _DesiredFunctionFound(BaseException):  # noqa: WPS418
+class _DesiredFunctionFound(BaseException):
     """Exception to raise when expected function is found."""
 
 
-def pytest_configure(config) -> None:
+def pytest_configure(config):
     """
     Hook to be executed on import.
 
@@ -119,25 +85,23 @@ def pytest_configure(config) -> None:
     """
     config.addinivalue_line(
         'markers',
-        (
-            'returns_lawful: all tests under `check_all_laws` '
-            + 'is marked this way, '
-            + 'use `-m "not returns_lawful"` to skip them.'
-        ),
+        'returns_lawful: all tests under `check_all_laws` '
+        + 'is marked this way, '
+        + 'use `-m "not returns_lawful"` to skip them.',
     )
 
 
 @pytest.fixture
-def returns() -> Iterator[ReturnsAsserts]:
+def returns():
     """Returns class with helpers assertions to check containers."""
     with _spy_error_handling() as errors_handled:
         yield ReturnsAsserts(errors_handled)
 
 
 @contextmanager
-def _spy_error_handling() -> Iterator[_ErrorsHandled]:
+def _spy_error_handling():
     """Track error handling of containers."""
-    errs: _ErrorsHandled = {}
+    errs = {}
     with ExitStack() as cleanup:
         for container in _containers_to_patch():
             for method, patch in _ERROR_HANDLING_PATCHERS.items():
@@ -151,16 +115,15 @@ def _spy_error_handling() -> Iterator[_ErrorsHandled]:
         yield errs
 
 
-# delayed imports are needed to prevent messing up coverage
-def _containers_to_patch() -> list:
-    from returns.context import (  # noqa: PLC0415
+def _containers_to_patch():
+    from returns.context import (
         RequiresContextFutureResult,
         RequiresContextIOResult,
         RequiresContextResult,
     )
-    from returns.future import FutureResult  # noqa: PLC0415
-    from returns.io import IOFailure, IOSuccess  # noqa: PLC0415
-    from returns.result import Failure, Success  # noqa: PLC0415
+    from returns.future import FutureResult
+    from returns.io import IOFailure, IOSuccess
+    from returns.result import Failure, Success
 
     return [
         Success,
@@ -174,10 +137,7 @@ def _containers_to_patch() -> list:
     ]
 
 
-def _patched_error_handler(
-    original: _FunctionType,
-    errs: _ErrorsHandled,
-) -> _FunctionType:
+def _patched_error_handler(original, errs):
     if inspect.iscoroutinefunction(original):
 
         async def async_wrapper(self, *args, **kwargs):
@@ -185,20 +145,17 @@ def _patched_error_handler(
             errs[id(original_result)] = original_result
             return original_result
 
-        return wraps(original)(async_wrapper)  # type: ignore
+        return wraps(original)(async_wrapper)
 
     def sync_wrapper(self, *args, **kwargs):
         original_result = original(self, *args, **kwargs)
         errs[id(original_result)] = original_result
         return original_result
 
-    return wraps(original)(sync_wrapper)  # type: ignore
+    return wraps(original)(sync_wrapper)
 
 
-def _patched_error_copier(
-    original: _FunctionType,
-    errs: _ErrorsHandled,
-) -> _FunctionType:
+def _patched_error_copier(original, errs):
     if inspect.iscoroutinefunction(original):
 
         async def async_wrapper(self, *args, **kwargs):
@@ -207,7 +164,7 @@ def _patched_error_copier(
                 errs[id(original_result)] = original_result
             return original_result
 
-        return wraps(original)(async_wrapper)  # type: ignore
+        return wraps(original)(async_wrapper)
 
     def sync_wrapper(self, *args, **kwargs):
         original_result = original(self, *args, **kwargs)
@@ -215,10 +172,10 @@ def _patched_error_copier(
             errs[id(original_result)] = original_result
         return original_result
 
-    return wraps(original)(sync_wrapper)  # type: ignore
+    return wraps(original)(sync_wrapper)
 
 
-_ERROR_HANDLING_PATCHERS: Final = MappingProxyType({
+_ERROR_HANDLING_PATCHERS = MappingProxyType({
     'lash': _patched_error_handler,
     'map': _patched_error_copier,
     'alt': _patched_error_copier,

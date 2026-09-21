@@ -27,13 +27,10 @@ See also:
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, ClassVar, Generic, TypeVar, final
+from typing import TYPE_CHECKING, Generic, TypeVar, final
 
 from returns.interfaces.container import Container2, Container3
-from returns.primitives.hkt import Kind2, Kind3
 from returns.primitives.laws import (
-    Law,
     Law2,
     Lawful,
     LawSpecDef,
@@ -41,16 +38,13 @@ from returns.primitives.laws import (
 )
 
 if TYPE_CHECKING:
-    from returns.context import NoDeps, RequiresContext  # noqa: WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ValueType = TypeVar('_ValueType')
 _EnvType = TypeVar('_EnvType')
-
 _ReaderLike2Type = TypeVar('_ReaderLike2Type', bound='ReaderLike2')
 _ReaderLike3Type = TypeVar('_ReaderLike3Type', bound='ReaderLike3')
 
@@ -75,7 +69,7 @@ class Contextable(Generic[_ValueType, _EnvType]):
     __slots__ = ()
 
     @abstractmethod
-    def __call__(self, deps: _EnvType) -> _ValueType:
+    def __call__(self, deps):
         """Receives one parameter, returns a value. As simple as that."""
 
 
@@ -90,45 +84,30 @@ class ReaderLike2(Container2[_FirstType, _SecondType]):
 
     @property
     @abstractmethod
-    def no_args(self: _ReaderLike2Type) -> NoDeps:
+    def no_args(self):
         """Is required to call ``Reader`` with no explicit arguments."""
 
     @abstractmethod
-    def bind_context(
-        self: _ReaderLike2Type,
-        function: Callable[
-            [_FirstType],
-            RequiresContext[_UpdatedType, _SecondType],
-        ],
-    ) -> Kind2[_ReaderLike2Type, _UpdatedType, _SecondType]:
+    def bind_context(self, function):
         """Allows to apply a wrapped function over a ``Reader`` container."""
 
     @abstractmethod
-    def modify_env(
-        self: _ReaderLike2Type,
-        function: Callable[[_UpdatedType], _SecondType],
-    ) -> Kind2[_ReaderLike2Type, _FirstType, _UpdatedType]:
+    def modify_env(self, function):
         """Transforms the environment before calling the container."""
 
     @classmethod
     @abstractmethod
-    def ask(
-        cls: type[_ReaderLike2Type],
-    ) -> Kind2[_ReaderLike2Type, _SecondType, _SecondType]:
+    def ask(cls):
         """Returns the dependencies inside the container."""
 
     @classmethod
     @abstractmethod
-    def from_context(
-        cls: type[_ReaderLike2Type],
-        inner_value: RequiresContext[_ValueType, _EnvType],
-    ) -> Kind2[_ReaderLike2Type, _ValueType, _EnvType]:
+    def from_context(cls, inner_value):
         """Unit method to create new containers from successful ``Reader``."""
 
 
 class CallableReader2(
-    ReaderLike2[_FirstType, _SecondType],
-    Contextable[_ValueType, _EnvType],
+    ReaderLike2[_FirstType, _SecondType], Contextable[_ValueType, _EnvType]
 ):
     """
     Intermediate interface for ``ReaderLike2`` + ``__call__`` method.
@@ -155,39 +134,25 @@ class ReaderLike3(Container3[_FirstType, _SecondType, _ThirdType]):
 
     @property
     @abstractmethod
-    def no_args(self: _ReaderLike3Type) -> NoDeps:
+    def no_args(self):
         """Is required to call ``Reader`` with no explicit arguments."""
 
     @abstractmethod
-    def bind_context(
-        self: _ReaderLike3Type,
-        function: Callable[
-            [_FirstType],
-            RequiresContext[_UpdatedType, _ThirdType],
-        ],
-    ) -> Kind3[_ReaderLike3Type, _UpdatedType, _SecondType, _ThirdType]:
+    def bind_context(self, function):
         """Allows to apply a wrapped function over a ``Reader`` container."""
 
     @abstractmethod
-    def modify_env(
-        self: _ReaderLike3Type,
-        function: Callable[[_UpdatedType], _ThirdType],
-    ) -> Kind3[_ReaderLike3Type, _FirstType, _SecondType, _UpdatedType]:
+    def modify_env(self, function):
         """Transforms the environment before calling the container."""
 
     @classmethod
     @abstractmethod
-    def ask(
-        cls: type[_ReaderLike3Type],
-    ) -> Kind3[_ReaderLike3Type, _ThirdType, _SecondType, _ThirdType]:
+    def ask(cls):
         """Returns the dependencies inside the container."""
 
     @classmethod
     @abstractmethod
-    def from_context(
-        cls: type[_ReaderLike3Type],
-        inner_value: RequiresContext[_ValueType, _EnvType],
-    ) -> Kind3[_ReaderLike3Type, _ValueType, _SecondType, _EnvType]:
+    def from_context(cls, inner_value):
         """Unit method to create new containers from successful ``Reader``."""
 
 
@@ -219,32 +184,20 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def purity_law(
-        container: ReaderBased2[_FirstType, _SecondType],
-        env: _SecondType,
-    ) -> None:
+    def purity_law(container, env):
         """Calling a ``Reader`` twice has the same result with the same env."""
         assert container(env) == container(env)
 
     @law_definition
-    def asking_law(
-        container: ReaderBased2[_FirstType, _SecondType],
-        env: _SecondType,
-    ) -> None:
+    def asking_law(container, env):
         """Asking for an env, always returns the env."""
-        assert container.ask().__call__(  # noqa: PLC2801
-            env,
-        ) == container.from_value(env).__call__(env)  # noqa: PLC2801
+        assert container.ask().__call__(env) == container.from_value(
+            env
+        ).__call__(env)
 
 
 class ReaderBased2(
-    CallableReader2[
-        _FirstType,
-        _SecondType,
-        # Used for call typing:
-        _FirstType,
-        _SecondType,
-    ],
+    CallableReader2[_FirstType, _SecondType, _FirstType, _SecondType],
     Lawful['ReaderBased2[_FirstType, _SecondType]'],
 ):
     """
@@ -255,8 +208,4 @@ class ReaderBased2(
     """
 
     __slots__ = ()
-
-    _laws: ClassVar[Sequence[Law]] = (
-        Law2(_LawSpec.purity_law),
-        Law2(_LawSpec.asking_law),
-    )
+    _laws = (Law2(_LawSpec.purity_law), Law2(_LawSpec.asking_law))
