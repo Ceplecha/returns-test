@@ -1,16 +1,14 @@
 import sys
-from collections.abc import Iterable
 
 import pytest
 
 from returns.context import (
-    NoDeps,
     Reader,
     ReaderFutureResult,
     ReaderIOResult,
     ReaderResult,
 )
-from returns.future import Future, FutureFailure, FutureResult, FutureSuccess
+from returns.future import Future, FutureFailure, FutureSuccess
 from returns.io import IO, IOFailure, IOSuccess
 from returns.iterables import Fold
 from returns.maybe import Nothing, Some
@@ -24,18 +22,13 @@ def _sum_two(first):
 @pytest.mark.parametrize(
     ('iterable', 'sequence'),
     [
-        # Regular types:
         ([], IO(10)),
         ([IO(1)], IO(11)),
         ([IO(1), IO(2)], IO(13)),
-        # Can fail:
         ([], Success(10)),
         ([Success(1)], Success(11)),
         ([Success(1), Success(2)], Success(13)),
-        (
-            [Failure('a'), Success(1), Success(2)],
-            Failure('a'),
-        ),
+        ([Failure('a'), Success(1), Success(2)], Failure('a')),
         ([Success(1), Failure('a')], Failure('a')),
         ([Failure('a'), Failure('b')], Failure('a')),
         ([], Some(10)),
@@ -48,10 +41,7 @@ def _sum_two(first):
         ([], IOSuccess(10)),
         ([IOSuccess(1)], IOSuccess(11)),
         ([IOSuccess(1), IOSuccess(2)], IOSuccess(13)),
-        (
-            [IOFailure('a'), IOSuccess(1), IOSuccess(2)],
-            IOFailure('a'),
-        ),
+        ([IOFailure('a'), IOSuccess(1), IOSuccess(2)], IOFailure('a')),
         ([IOFailure('a'), IOFailure('b')], IOFailure('a')),
     ],
 )
@@ -63,14 +53,9 @@ def test_fold_loop(iterable, sequence):
 @pytest.mark.parametrize(
     ('iterable', 'sequence'),
     [
-        # Regular types:
         ([], Reader.from_value(10)),
         ([Reader.from_value(1)], Reader.from_value(11)),
-        (
-            [Reader.from_value(1), Reader.from_value(2)],
-            Reader.from_value(13),
-        ),
-        # Can fail:
+        ([Reader.from_value(1), Reader.from_value(2)], Reader.from_value(13)),
         ([], ReaderResult.from_value(10)),
         ([ReaderResult.from_value(1)], ReaderResult.from_value(11)),
         (
@@ -118,27 +103,17 @@ def test_fold_loop(iterable, sequence):
 )
 def test_fold_loop_reader(iterable, sequence):
     """Ensures that ``.loop`` works for readers."""
-    assert Fold.loop(
-        iterable,
-        sequence.from_value(10),
-        _sum_two,
-    )(...) == sequence(...)
+    assert Fold.loop(iterable, sequence.from_value(10), _sum_two)(
+        ...
+    ) == sequence(...)
 
 
 @pytest.mark.anyio
 async def test_fold_loop_reader_future_result(subtests):
     """Iterable for ``ReaderFutureResult`` and ``Fold``."""
-    containers: list[
-        tuple[  # noqa: WPS234
-            Iterable[ReaderFutureResult[int, str, NoDeps]],
-            ReaderFutureResult[int, str, NoDeps],
-        ]
-    ] = [
+    containers = [
         ([], ReaderFutureResult.from_value(10)),
-        (
-            [ReaderFutureResult.from_value(1)],
-            ReaderFutureResult.from_value(11),
-        ),
+        ([ReaderFutureResult.from_value(1)], ReaderFutureResult.from_value(11)),
         (
             [
                 ReaderFutureResult.from_value(1),
@@ -171,37 +146,23 @@ async def test_fold_loop_reader_future_result(subtests):
     ]
     for iterable, sequence in containers:
         with subtests.test(iterable=iterable, sequence=sequence):
-            assert await Fold.loop(
-                iterable,
-                sequence.from_value(10),
-                _sum_two,
-            )(...) == await sequence(...)
+            assert await Fold.loop(iterable, sequence.from_value(10), _sum_two)(
+                ...
+            ) == await sequence(...)
 
 
 @pytest.mark.anyio
 async def test_fold_collect_future(subtests):
     """Iterable for ``Future`` and ``Fold``."""
-    containers: list[
-        tuple[  # noqa: WPS234
-            Iterable[Future[int]],
-            Future[int],
-        ]
-    ] = [
+    containers = [
         ([], Future.from_value(10)),
         ([Future.from_value(1)], Future.from_value(11)),
-        (
-            [Future.from_value(1), Future.from_value(2)],
-            Future.from_value(13),
-        ),
+        ([Future.from_value(1), Future.from_value(2)], Future.from_value(13)),
     ]
     for iterable, sequence in containers:
         with subtests.test(iterable=iterable, sequence=sequence):
             assert (
-                await Fold.loop(
-                    iterable,
-                    sequence.from_value(10),
-                    _sum_two,
-                )
+                await Fold.loop(iterable, sequence.from_value(10), _sum_two)
                 == await sequence
             )
 
@@ -209,12 +170,7 @@ async def test_fold_collect_future(subtests):
 @pytest.mark.anyio
 async def test_fold_collect_future_result(subtests):
     """Iterable for ``FutureResult`` and ``Fold``."""
-    containers: list[
-        tuple[  # noqa: WPS234
-            Iterable[FutureResult[int, str]],
-            FutureResult[int, str],
-        ]
-    ] = [
+    containers = [
         ([], FutureSuccess(10)),
         ([FutureSuccess(1)], FutureSuccess(11)),
         ([FutureSuccess(1), FutureSuccess(2)], FutureSuccess(13)),
@@ -228,11 +184,7 @@ async def test_fold_collect_future_result(subtests):
     for iterable, sequence in containers:
         with subtests.test(iterable=iterable, sequence=sequence):
             assert (
-                await Fold.loop(
-                    iterable,
-                    sequence.from_value(10),
-                    _sum_two,
-                )
+                await Fold.loop(iterable, sequence.from_value(10), _sum_two)
                 == await sequence
             )
 

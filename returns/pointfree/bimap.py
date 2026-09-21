@@ -1,28 +1,17 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.bimappable import BiMappableN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _UpdatedType1 = TypeVar('_UpdatedType1')
 _UpdatedType2 = TypeVar('_UpdatedType2')
-
 _BiMappableKind = TypeVar('_BiMappableKind', bound=BiMappableN)
 
 
-def bimap(
-    on_first: Callable[[_FirstType], _UpdatedType1],
-    on_second: Callable[[_SecondType], _UpdatedType2],
-) -> Kinded[
-    Callable[
-        [KindN[_BiMappableKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[_BiMappableKind, _UpdatedType1, _UpdatedType2, _ThirdType],
-    ]
-]:
+def bimap(on_first, on_second):
     """
     Maps container on both: first and second arguments.
 
@@ -52,9 +41,7 @@ def bimap(
     """
 
     @kinded
-    def factory(
-        container: KindN[_BiMappableKind, _FirstType, _SecondType, _ThirdType],
-    ) -> KindN[_BiMappableKind, _UpdatedType1, _UpdatedType2, _ThirdType]:
+    def factory(container):
         return container.map(on_first).alt(on_second)
 
     return factory
