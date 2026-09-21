@@ -1,30 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeVar
 
 from returns.interfaces.specific.io import IOLikeN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 if TYPE_CHECKING:
-    from returns.io import IO  # noqa: WPS433
-
+    pass
 _FirstType_contra = TypeVar('_FirstType_contra', contravariant=True)
 _SecondType = TypeVar('_SecondType')
 _ThirdType_contra = TypeVar('_ThirdType_contra', contravariant=True)
 _UpdatedType_co = TypeVar('_UpdatedType_co', covariant=True)
-
 _IOLikeKind = TypeVar('_IOLikeKind', bound=IOLikeN)
 
 
-def bind_io(
-    function: Callable[[_FirstType_contra], IO[_UpdatedType_co]],
-) -> Kinded[
-    Callable[
-        [KindN[_IOLikeKind, _FirstType_contra, _SecondType, _ThirdType_contra]],
-        KindN[_IOLikeKind, _UpdatedType_co, _SecondType, _ThirdType_contra],
-    ]
-]:
+def bind_io(function):
     """
     Composes successful container with a function that returns a container.
 
@@ -51,11 +41,7 @@ def bind_io(
     """
 
     @kinded
-    def factory(
-        container: KindN[
-            _IOLikeKind, _FirstType_contra, _SecondType, _ThirdType_contra
-        ],
-    ) -> KindN[_IOLikeKind, _UpdatedType_co, _SecondType, _ThirdType_contra]:
+    def factory(container):
         return container.bind_io(function)
 
     return factory

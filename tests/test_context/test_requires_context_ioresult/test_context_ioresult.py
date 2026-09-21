@@ -18,7 +18,7 @@ def test_requires_context_result_immutable_copy():
     assert context_ioresult is copy(context_ioresult)
 
 
-def test_requires_context_result_immutable_deepcopy():  # noqa: WPS118
+def test_requires_context_result_immutable_deepcopy():
     """Ensures that helper returns it self when passed to deepcopy function."""
     requires_context = RequiresContextIOResult.from_value(1)
     assert requires_context is deepcopy(requires_context)

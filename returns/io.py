@@ -1,8 +1,6 @@
 from abc import ABC
-from collections.abc import Callable, Generator, Iterator
 from functools import wraps
-from inspect import FrameInfo
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar, final, overload
+from typing import TYPE_CHECKING, Any, TypeVar, final, overload
 
 from typing_extensions import ParamSpec
 
@@ -10,28 +8,21 @@ from returns.interfaces.specific import io, ioresult
 from returns.primitives.container import BaseContainer, container_equality
 from returns.primitives.exceptions import UnwrapFailedError
 from returns.primitives.hkt import (
-    Kind1,
-    Kind2,
     SupportsKind1,
     SupportsKind2,
     dekind,
 )
-from returns.result import Failure, Result, Success
+from returns.result import Failure, Success
 
 _ValueType_co = TypeVar('_ValueType_co', covariant=True)
 _NewValueType = TypeVar('_NewValueType')
-
 _FuncParams = ParamSpec('_FuncParams')
-
-# Result related:
 _ErrorType_co = TypeVar('_ErrorType_co', covariant=True)
 _NewErrorType = TypeVar('_NewErrorType')
 
 
-class IO(  # type: ignore[type-var]
-    BaseContainer,
-    SupportsKind1['IO', _ValueType_co],
-    io.IOLike1[_ValueType_co],
+class IO(
+    BaseContainer, SupportsKind1['IO', _ValueType_co], io.IOLike1[_ValueType_co]
 ):
     """
     Explicit container for impure function results.
@@ -59,13 +50,9 @@ class IO(  # type: ignore[type-var]
     """
 
     __slots__ = ()
-
-    _inner_value: _ValueType_co
-
-    #: Typesafe equality comparison with other `Result` objects.
     equals = container_equality
 
-    def __init__(self, inner_value: _ValueType_co) -> None:
+    def __init__(self, inner_value):
         """
         Public constructor for this type. Also required for typing.
 
@@ -77,10 +64,7 @@ class IO(  # type: ignore[type-var]
         """
         super().__init__(inner_value)
 
-    def map(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType],
-    ) -> 'IO[_NewValueType]':
+    def map(self, function):
         """
         Applies function to the inner value.
 
@@ -99,10 +83,7 @@ class IO(  # type: ignore[type-var]
         """
         return IO(function(self._inner_value))
 
-    def apply(
-        self,
-        container: Kind1['IO', Callable[[_ValueType_co], _NewValueType]],
-    ) -> 'IO[_NewValueType]':
+    def apply(self, container):
         """
         Calls a wrapped function in a container on this container.
 
@@ -125,12 +106,9 @@ class IO(  # type: ignore[type-var]
           >>> assert IO('b').apply(IO('a').apply(IO(applicable))) == IO('ab')
 
         """
-        return self.map(dekind(container)._inner_value)  # noqa: SLF001
+        return self.map(dekind(container)._inner_value)
 
-    def bind(
-        self,
-        function: Callable[[_ValueType_co], Kind1['IO', _NewValueType]],
-    ) -> 'IO[_NewValueType]':
+    def bind(self, function):
         """
         Applies 'function' to the result of a previous calculation.
 
@@ -147,18 +125,14 @@ class IO(  # type: ignore[type-var]
         """
         return dekind(function(self._inner_value))
 
-    #: Alias for `bind` method. Part of the `IOLikeN` interface.
     bind_io = bind
 
-    def __iter__(self) -> Iterator[_ValueType_co]:
+    def __iter__(self):
         """API for :ref:`do-notation`."""
         yield self._inner_value
 
     @classmethod
-    def do(
-        cls,
-        expr: Generator[_NewValueType, None, None],
-    ) -> 'IO[_NewValueType]':
+    def do(cls, expr):
         """
         Allows working with unwrapped values of containers in a safe way.
 
@@ -177,7 +151,7 @@ class IO(  # type: ignore[type-var]
         return IO(next(expr))
 
     @classmethod
-    def from_value(cls, inner_value: _NewValueType) -> 'IO[_NewValueType]':
+    def from_value(cls, inner_value):
         """
         Unit function to construct new ``IO`` values.
 
@@ -194,7 +168,7 @@ class IO(  # type: ignore[type-var]
         return IO(inner_value)
 
     @classmethod
-    def from_io(cls, inner_value: 'IO[_NewValueType]') -> 'IO[_NewValueType]':
+    def from_io(cls, inner_value):
         """
         Unit function to construct new ``IO`` values from existing ``IO``.
 
@@ -209,10 +183,7 @@ class IO(  # type: ignore[type-var]
         return inner_value
 
     @classmethod
-    def from_ioresult(
-        cls,
-        inner_value: 'IOResult[_NewValueType, _NewErrorType]',
-    ) -> 'IO[Result[_NewValueType, _NewErrorType]]':
+    def from_ioresult(cls, inner_value):
         """
         Converts ``IOResult[a, b]`` back to ``IO[Result[a, b]]``.
 
@@ -226,15 +197,10 @@ class IO(  # type: ignore[type-var]
 
         Is the reverse of :meth:`returns.io.IOResult.from_typecast`.
         """
-        return IO(inner_value._inner_value)  # noqa: SLF001
+        return IO(inner_value._inner_value)
 
 
-# Helper functions:
-
-
-def impure(
-    function: Callable[_FuncParams, _NewValueType],
-) -> Callable[_FuncParams, IO[_NewValueType]]:
+def impure(function):
     """
     Decorator to mark function that it returns :class:`~IO` container.
 
@@ -256,19 +222,13 @@ def impure(
     """
 
     @wraps(function)
-    def decorator(
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> IO[_NewValueType]:
+    def decorator(*args, **kwargs):
         return IO(function(*args, **kwargs))
 
     return decorator
 
 
-# IO and Result:
-
-
-class IOResult(  # type: ignore[type-var]
+class IOResult(
     BaseContainer,
     SupportsKind2['IOResult', _ValueType_co, _ErrorType_co],
     ioresult.IOResultBased2[_ValueType_co, _ErrorType_co],
@@ -330,16 +290,10 @@ class IOResult(  # type: ignore[type-var]
     """
 
     __slots__ = ()
-
-    _inner_value: Result[_ValueType_co, _ErrorType_co]
     __match_args__ = ('_inner_value',)
-
-    #: Typesafe equality comparison with other `IOResult` objects.
     equals = container_equality
 
-    def __init__(
-        self, inner_value: Result[_ValueType_co, _ErrorType_co]
-    ) -> None:
+    def __init__(self, inner_value):
         """
         Private type constructor.
 
@@ -348,7 +302,7 @@ class IOResult(  # type: ignore[type-var]
         """
         super().__init__(inner_value)
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         """
         Custom ``str`` representation for better readability.
 
@@ -364,11 +318,11 @@ class IOResult(  # type: ignore[type-var]
         return f'<IOResult: {self._inner_value}>'
 
     @property
-    def trace(self) -> list[FrameInfo] | None:
+    def trace(self):
         """Returns a stack trace when :func:`~IOFailure` was called."""
         return self._inner_value.trace
 
-    def swap(self) -> 'IOResult[_ErrorType_co, _ValueType_co]':
+    def swap(self):
         """
         Swaps value and error types.
 
@@ -386,10 +340,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return self.from_result(self._inner_value.swap())
 
-    def map(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def map(self, function):
         """
         Composes successful container with a pure function.
 
@@ -401,14 +352,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return self.from_result(self._inner_value.map(function))
 
-    def apply(
-        self,
-        container: Kind2[
-            'IOResult',
-            Callable[[_ValueType_co], _NewValueType],
-            _ErrorType_co,
-        ],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def apply(self, container):
         """
         Calls a wrapped function in a container on this container.
 
@@ -434,19 +378,11 @@ class IOResult(  # type: ignore[type-var]
             return self
         if isinstance(container, IOSuccess):
             return self.from_result(
-                self._inner_value.map(
-                    container.unwrap()._inner_value,  # noqa: SLF001
-                ),
+                self._inner_value.map(container.unwrap()._inner_value)
             )
-        return container  # type: ignore
+        return container
 
-    def bind(
-        self,
-        function: Callable[
-            [_ValueType_co],
-            Kind2['IOResult', _NewValueType, _ErrorType_co],
-        ],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def bind(self, function):
         """
         Composes successful container with a function that returns a container.
 
@@ -464,16 +400,9 @@ class IOResult(  # type: ignore[type-var]
 
         """
 
-    #: Alias for `bind_ioresult` method. Part of the `IOResultBasedN` interface.
     bind_ioresult = bind
 
-    def bind_result(
-        self,
-        function: Callable[
-            [_ValueType_co],
-            Result[_NewValueType, _ErrorType_co],
-        ],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def bind_result(self, function):
         """
         Composes successful container with a function that returns a container.
 
@@ -497,10 +426,7 @@ class IOResult(  # type: ignore[type-var]
 
         """
 
-    def bind_io(
-        self,
-        function: Callable[[_ValueType_co], IO[_NewValueType]],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def bind_io(self, function):
         """
         Composes successful container with a function that returns a container.
 
@@ -519,10 +445,7 @@ class IOResult(  # type: ignore[type-var]
 
         """
 
-    def alt(
-        self,
-        function: Callable[[_ErrorType_co], _NewErrorType],
-    ) -> 'IOResult[_ValueType_co, _NewErrorType]':
+    def alt(self, function):
         """
         Composes failed container with a pure function to modify failure.
 
@@ -534,13 +457,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return self.from_result(self._inner_value.alt(function))
 
-    def lash(
-        self,
-        function: Callable[
-            [_ErrorType_co],
-            Kind2['IOResult', _ValueType_co, _NewErrorType],
-        ],
-    ) -> 'IOResult[_ValueType_co, _NewErrorType]':
+    def lash(self, function):
         """
         Composes failed container with a function that returns a container.
 
@@ -558,10 +475,7 @@ class IOResult(  # type: ignore[type-var]
 
         """
 
-    def value_or(
-        self,
-        default_value: _NewValueType,
-    ) -> IO[_ValueType_co | _NewValueType]:
+    def value_or(self, default_value):
         """
         Get value from successful container or default value from failed one.
 
@@ -574,7 +488,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return IO(self._inner_value.value_or(default_value))
 
-    def unwrap(self) -> IO[_ValueType_co]:
+    def unwrap(self):
         """
         Get value from successful container or raise exception for failed one.
 
@@ -592,7 +506,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return IO(self._inner_value.unwrap())
 
-    def failure(self) -> IO[_ErrorType_co]:
+    def failure(self):
         """
         Get failed value from failed container or raise exception from success.
 
@@ -610,13 +524,7 @@ class IOResult(  # type: ignore[type-var]
         """
         return IO(self._inner_value.failure())
 
-    def compose_result(
-        self,
-        function: Callable[
-            [Result[_ValueType_co, _ErrorType_co]],
-            Kind2['IOResult', _NewValueType, _ErrorType_co],
-        ],
-    ) -> 'IOResult[_NewValueType, _ErrorType_co]':
+    def compose_result(self, function):
         """
         Composes inner ``Result`` with ``IOResult`` returning function.
 
@@ -638,16 +546,12 @@ class IOResult(  # type: ignore[type-var]
         """
         return dekind(function(self._inner_value))
 
-    def __iter__(self) -> Iterator[_ValueType_co]:
+    def __iter__(self):
         """API for :ref:`do-notation`."""
-        # We also unwrap `IO` here.
-        yield self.unwrap()._inner_value  # noqa: SLF001
+        yield self.unwrap()._inner_value
 
     @classmethod
-    def do(
-        cls,
-        expr: Generator[_NewValueType, None, None],
-    ) -> 'IOResult[_NewValueType, _NewErrorType]':
+    def do(cls, expr):
         """
         Allows working with unwrapped values of containers in a safe way.
 
@@ -674,13 +578,10 @@ class IOResult(  # type: ignore[type-var]
         try:
             return IOResult.from_value(next(expr))
         except UnwrapFailedError as exc:
-            return IOResult.from_result(exc.halted_container)  # type: ignore
+            return IOResult.from_result(exc.halted_container)
 
     @classmethod
-    def from_typecast(
-        cls,
-        inner_value: IO[Result[_NewValueType, _NewErrorType]],
-    ) -> 'IOResult[_NewValueType, _NewErrorType]':
+    def from_typecast(cls, inner_value):
         """
         Converts ``IO[Result[_ValueType_co, _ErrorType_co]]`` to ``IOResult``.
 
@@ -697,13 +598,10 @@ class IOResult(  # type: ignore[type-var]
 
         Can be reverted via :meth:`returns.io.IO.from_ioresult` method.
         """
-        return cls.from_result(inner_value._inner_value)  # noqa: SLF001
+        return cls.from_result(inner_value._inner_value)
 
     @classmethod
-    def from_failed_io(
-        cls,
-        inner_value: IO[_NewErrorType],
-    ) -> 'IOResult[Any, _NewErrorType]':
+    def from_failed_io(cls, inner_value):
         """
         Creates new ``IOResult`` from "failed" ``IO`` container.
 
@@ -714,13 +612,10 @@ class IOResult(  # type: ignore[type-var]
           >>> assert IOResult.from_failed_io(container) == IOFailure(1)
 
         """
-        return IOFailure(inner_value._inner_value)  # noqa: SLF001
+        return IOFailure(inner_value._inner_value)
 
     @classmethod
-    def from_io(
-        cls,
-        inner_value: IO[_NewValueType],
-    ) -> 'IOResult[_NewValueType, Any]':
+    def from_io(cls, inner_value):
         """
         Creates new ``IOResult`` from "successful" ``IO`` container.
 
@@ -731,13 +626,10 @@ class IOResult(  # type: ignore[type-var]
           >>> assert IOResult.from_io(container) == IOSuccess(1)
 
         """
-        return IOSuccess(inner_value._inner_value)  # noqa: SLF001
+        return IOSuccess(inner_value._inner_value)
 
     @classmethod
-    def from_result(
-        cls,
-        inner_value: Result[_NewValueType, _NewErrorType],
-    ) -> 'IOResult[_NewValueType, _NewErrorType]':
+    def from_result(cls, inner_value):
         """
         Creates ``IOResult`` from ``Result`` value.
 
@@ -751,14 +643,11 @@ class IOResult(  # type: ignore[type-var]
 
         """
         if isinstance(inner_value, Success):
-            return IOSuccess(inner_value._inner_value)  # noqa: SLF001
-        return IOFailure(inner_value._inner_value)  # type: ignore[arg-type]  # noqa: SLF001
+            return IOSuccess(inner_value._inner_value)
+        return IOFailure(inner_value._inner_value)
 
     @classmethod
-    def from_ioresult(
-        cls,
-        inner_value: 'IOResult[_NewValueType, _NewErrorType]',
-    ) -> 'IOResult[_NewValueType, _NewErrorType]':
+    def from_ioresult(cls, inner_value):
         """
         Creates ``IOResult`` from existing ``IOResult`` value.
 
@@ -773,10 +662,7 @@ class IOResult(  # type: ignore[type-var]
         return inner_value
 
     @classmethod
-    def from_value(
-        cls,
-        inner_value: _NewValueType,
-    ) -> 'IOResult[_NewValueType, Any]':
+    def from_value(cls, inner_value):
         """
         One more value to create success unit values.
 
@@ -794,10 +680,7 @@ class IOResult(  # type: ignore[type-var]
         return IOSuccess(inner_value)
 
     @classmethod
-    def from_failure(
-        cls,
-        inner_value: _NewErrorType,
-    ) -> 'IOResult[Any, _NewErrorType]':
+    def from_failure(cls, inner_value):
         """
         One more value to create failure unit values.
 
@@ -821,19 +704,16 @@ class IOFailure(IOResult[Any, _ErrorType_co]):
 
     __slots__ = ()
 
-    _inner_value: Result[Any, _ErrorType_co]
-
-    def __init__(self, inner_value: _ErrorType_co) -> None:
+    def __init__(self, inner_value):
         """IOFailure constructor."""
         super().__init__(Failure(inner_value))
 
-    if not TYPE_CHECKING:  # noqa: WPS604  # pragma: no branch
+    if not TYPE_CHECKING:
 
         def bind(self, function):
             """Does nothing for ``IOFailure``."""
             return self
 
-        #: Alias for `bind_ioresult` method. Part of the `IOResultBasedN` interface.  # noqa: E501
         bind_ioresult = bind
 
         def bind_result(self, function):
@@ -845,7 +725,7 @@ class IOFailure(IOResult[Any, _ErrorType_co]):
             return self
 
         def lash(self, function):
-            """Composes this container with a function returning ``IOResult``."""  # noqa: E501
+            """Composes this container with a function returning ``IOResult``."""
             return function(self._inner_value.failure())
 
 
@@ -855,19 +735,16 @@ class IOSuccess(IOResult[_ValueType_co, Any]):
 
     __slots__ = ()
 
-    _inner_value: Result[_ValueType_co, Any]
-
-    def __init__(self, inner_value: _ValueType_co) -> None:
+    def __init__(self, inner_value):
         """IOSuccess constructor."""
         super().__init__(Success(inner_value))
 
-    if not TYPE_CHECKING:  # noqa: WPS604  # pragma: no branch
+    if not TYPE_CHECKING:
 
         def bind(self, function):
-            """Composes this container with a function returning ``IOResult``."""  # noqa: E501
+            """Composes this container with a function returning ``IOResult``."""
             return function(self._inner_value.unwrap())
 
-        #: Alias for `bind_ioresult` method. Part of the `IOResultBasedN` interface.  # noqa: E501
         bind_ioresult = bind
 
         def bind_result(self, function):
@@ -883,45 +760,19 @@ class IOSuccess(IOResult[_ValueType_co, Any]):
             return self
 
 
-# Aliases:
-
-
-#: Alias for ``IOResult[_ValueType_co, Exception]``.
-IOResultE: TypeAlias = IOResult[_ValueType_co, Exception]
-
-
-# impure_safe decorator:
-
+IOResultE = IOResult[_ValueType_co, Exception]
 _ExceptionType = TypeVar('_ExceptionType', bound=Exception)
 
 
 @overload
-def impure_safe(
-    function: Callable[_FuncParams, _NewValueType],
-    /,
-) -> Callable[_FuncParams, IOResultE[_NewValueType]]: ...
+def impure_safe(function, /): ...
 
 
 @overload
-def impure_safe(
-    exceptions: tuple[type[_ExceptionType], ...],
-) -> Callable[
-    [Callable[_FuncParams, _NewValueType]],
-    Callable[_FuncParams, IOResult[_NewValueType, _ExceptionType]],
-]: ...
+def impure_safe(exceptions): ...
 
 
-def impure_safe(  # noqa: WPS234
-    exceptions: (
-        Callable[_FuncParams, _NewValueType] | tuple[type[_ExceptionType], ...]
-    ),
-) -> (
-    Callable[_FuncParams, IOResultE[_NewValueType]]
-    | Callable[
-        [Callable[_FuncParams, _NewValueType]],
-        Callable[_FuncParams, IOResult[_NewValueType, _ExceptionType]],
-    ]
-):
+def impure_safe(exceptions):
     """
     Decorator to mark function that it returns :class:`~IOResult` container.
 
@@ -964,15 +815,10 @@ def impure_safe(  # noqa: WPS234
     and :func:`returns.result.safe` decorators.
     """
 
-    def factory(
-        inner_function: Callable[_FuncParams, _NewValueType],
-        inner_exceptions: tuple[type[_ExceptionType], ...],
-    ) -> Callable[_FuncParams, IOResult[_NewValueType, _ExceptionType]]:
+    def factory(inner_function, inner_exceptions):
+
         @wraps(inner_function)
-        def decorator(
-            *args: _FuncParams.args,
-            **kwargs: _FuncParams.kwargs,
-        ) -> IOResult[_NewValueType, _ExceptionType]:
+        def decorator(*args, **kwargs):
             try:
                 return IOSuccess(inner_function(*args, **kwargs))
             except inner_exceptions as exc:
@@ -982,7 +828,4 @@ def impure_safe(  # noqa: WPS234
 
     if isinstance(exceptions, tuple):
         return lambda function: factory(function, exceptions)
-    return factory(
-        exceptions,
-        (Exception,),  # type: ignore[arg-type]
-    )
+    return factory(exceptions, (Exception,))

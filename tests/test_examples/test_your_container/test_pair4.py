@@ -1,30 +1,24 @@
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import ClassVar, Never, TypeVar, final
+from typing import Never, TypeVar, final
 
 from returns.contrib.hypothesis.laws import check_all_laws
 from returns.interfaces import bindable, equable, lashable, swappable
 from returns.primitives.asserts import assert_equal
 from returns.primitives.container import BaseContainer, container_equality
-from returns.primitives.hkt import Kind2, KindN, SupportsKind2, dekind
-from returns.primitives.laws import Law, Law2, Law3, LawSpecDef, law_definition
+from returns.primitives.hkt import SupportsKind2, dekind
+from returns.primitives.laws import Law2, Law3, LawSpecDef, law_definition
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _NewFirstType = TypeVar('_NewFirstType')
 _NewSecondType = TypeVar('_NewSecondType')
-
 _PairLikeKind = TypeVar('_PairLikeKind', bound='PairLikeN')
 
 
 class _LawSpec(LawSpecDef):
     @law_definition
-    def pair_equality_law(
-        raw_value: _FirstType,
-        container: 'PairLikeN[_FirstType, _SecondType, _ThirdType]',
-    ) -> None:
+    def pair_equality_law(raw_value, container):
         """Ensures that unpaired and paired constructors work fine."""
         assert_equal(
             container.from_unpaired(raw_value),
@@ -32,18 +26,10 @@ class _LawSpec(LawSpecDef):
         )
 
     @law_definition
-    def pair_left_identity_law(
-        pair: tuple[_FirstType, _SecondType],
-        container: 'PairLikeN[_FirstType, _SecondType, _ThirdType]',
-        function: Callable[
-            [_FirstType, _SecondType],
-            KindN['PairLikeN', _NewFirstType, _NewSecondType, _ThirdType],
-        ],
-    ) -> None:
+    def pair_left_identity_law(pair, container, function):
         """Ensures that unpaired and paired constructors work fine."""
         assert_equal(
-            container.from_paired(*pair).pair(function),
-            function(*pair),
+            container.from_paired(*pair).pair(function), function(*pair)
         )
 
 
@@ -55,36 +41,23 @@ class PairLikeN(
 ):
     """Special interface for types that look like a ``Pair``."""
 
-    _laws: ClassVar[Sequence[Law]] = (
+    _laws = (
         Law2(_LawSpec.pair_equality_law),
         Law3(_LawSpec.pair_left_identity_law),
     )
 
     @abstractmethod
-    def pair(
-        self: _PairLikeKind,
-        function: Callable[
-            [_FirstType, _SecondType],
-            KindN[_PairLikeKind, _NewFirstType, _NewSecondType, _ThirdType],
-        ],
-    ) -> KindN[_PairLikeKind, _NewFirstType, _NewSecondType, _ThirdType]:
+    def pair(self, function):
         """Allows to work with both arguments at the same time."""
 
     @classmethod
     @abstractmethod
-    def from_paired(
-        cls: type[_PairLikeKind],
-        first: _NewFirstType,
-        second: _NewSecondType,
-    ) -> KindN[_PairLikeKind, _NewFirstType, _NewSecondType, _ThirdType]:
+    def from_paired(cls, first, second):
         """Allows to create a PairLikeN from just two values."""
 
     @classmethod
     @abstractmethod
-    def from_unpaired(
-        cls: type[_PairLikeKind],
-        inner_value: _NewFirstType,
-    ) -> KindN[_PairLikeKind, _NewFirstType, _NewFirstType, _ThirdType]:
+    def from_unpaired(cls, inner_value):
         """Allows to create a PairLikeN from just a single object."""
 
 
@@ -106,23 +79,13 @@ class Pair(
 
     """
 
-    def __init__(
-        self,
-        inner_value: tuple[_FirstType, _SecondType],
-    ) -> None:
+    def __init__(self, inner_value):
         """Saves passed tuple as ``._inner_value`` inside this instance."""
         super().__init__(inner_value)
 
-    # `Equable` part:
+    equals = container_equality
 
-    equals = container_equality  # we already have this defined for all types
-
-    # `Mappable` part via `BiMappable`:
-
-    def map(
-        self,
-        function: Callable[[_FirstType], _NewFirstType],
-    ) -> 'Pair[_NewFirstType, _SecondType]':
+    def map(self, function):
         """
         Changes the first type with a pure function.
 
@@ -131,15 +94,7 @@ class Pair(
         """
         return Pair((function(self._inner_value[0]), self._inner_value[1]))
 
-    # `BindableN` part:
-
-    def bind(
-        self,
-        function: Callable[
-            [_FirstType],
-            Kind2['Pair', _NewFirstType, _SecondType],
-        ],
-    ) -> 'Pair[_NewFirstType, _SecondType]':
+    def bind(self, function):
         """
         Changes the first type with a function returning another ``Pair``.
 
@@ -151,12 +106,7 @@ class Pair(
         """
         return dekind(function(self._inner_value[0]))
 
-    # `AltableN` part via `BiMappableN`:
-
-    def alt(
-        self,
-        function: Callable[[_SecondType], _NewSecondType],
-    ) -> 'Pair[_FirstType, _NewSecondType]':
+    def alt(self, function):
         """
         Changes the second type with a pure function.
 
@@ -165,15 +115,7 @@ class Pair(
         """
         return Pair((self._inner_value[0], function(self._inner_value[1])))
 
-    # `LashableN` part:
-
-    def lash(
-        self,
-        function: Callable[
-            [_SecondType],
-            Kind2['Pair', _FirstType, _NewSecondType],
-        ],
-    ) -> 'Pair[_FirstType, _NewSecondType]':
+    def lash(self, function):
         """
         Changes the second type with a function returning ``Pair``.
 
@@ -185,9 +127,7 @@ class Pair(
         """
         return dekind(function(self._inner_value[1]))
 
-    # `SwappableN` part:
-
-    def swap(self) -> 'Pair[_SecondType, _FirstType]':
+    def swap(self):
         """
         Swaps ``Pair`` elements.
 
@@ -196,15 +136,7 @@ class Pair(
         """
         return Pair((self._inner_value[1], self._inner_value[0]))
 
-    # `PairLikeN` part:
-
-    def pair(
-        self,
-        function: Callable[
-            [_FirstType, _SecondType],
-            Kind2['Pair', _NewFirstType, _NewSecondType],
-        ],
-    ) -> 'Pair[_NewFirstType, _NewSecondType]':
+    def pair(self, function):
         """
         Creates a new ``Pair`` from an existing one via a passed function.
 
@@ -218,11 +150,7 @@ class Pair(
         return dekind(function(self._inner_value[0], self._inner_value[1]))
 
     @classmethod
-    def from_paired(
-        cls,
-        first: _NewFirstType,
-        second: _NewSecondType,
-    ) -> 'Pair[_NewFirstType, _NewSecondType]':
+    def from_paired(cls, first, second):
         """
         Creates a new pair from two values.
 
@@ -232,10 +160,7 @@ class Pair(
         return Pair((first, second))
 
     @classmethod
-    def from_unpaired(
-        cls,
-        inner_value: _NewFirstType,
-    ) -> 'Pair[_NewFirstType, _NewFirstType]':
+    def from_unpaired(cls, inner_value):
         """
         Creates a new pair from a single value.
 
@@ -245,5 +170,4 @@ class Pair(
         return Pair((inner_value, inner_value))
 
 
-# Running hypothesis auto-generated tests:
 check_all_laws(Pair, use_init=True)
