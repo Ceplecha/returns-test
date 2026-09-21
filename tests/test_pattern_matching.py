@@ -1,20 +1,15 @@
 import pytest
 
-from returns.io import IO, IOFailure, IOResult, IOSuccess
+from returns.io import IO, IOFailure, IOSuccess
 from returns.maybe import Maybe, Nothing, Some
-from returns.result import Failure, Result, Success
+from returns.result import Failure, Success
 
 
 @pytest.mark.parametrize(
     'container',
-    [
-        Success(10),
-        Success(42),
-        Failure(RuntimeError()),
-        Failure(Exception()),
-    ],
+    [Success(10), Success(42), Failure(RuntimeError()), Failure(Exception())],
 )
-def test_result_pattern_matching(container: Result[int, Exception]):
+def test_result_pattern_matching(container):
     """Ensures ``Result`` containers work properly with pattern matching."""
     match container:
         case Success(10):
@@ -35,14 +30,9 @@ def test_result_pattern_matching(container: Result[int, Exception]):
 
 
 @pytest.mark.parametrize(
-    'container',
-    [
-        Some('SOME'),
-        Some('THERE IS SOME VALUE'),
-        Nothing,
-    ],
+    'container', [Some('SOME'), Some('THERE IS SOME VALUE'), Nothing]
 )
-def test_maybe_pattern_matching(container: Maybe[str]):
+def test_maybe_pattern_matching(container):
     """Ensures ``Maybe`` containers work properly with pattern matching."""
     match container:
         case Some('SOME'):
@@ -59,14 +49,9 @@ def test_maybe_pattern_matching(container: Maybe[str]):
 
 
 @pytest.mark.parametrize(
-    'container',
-    [
-        IOSuccess(42.0),
-        IOSuccess(10.0),
-        IOFailure(50),
-    ],
+    'container', [IOSuccess(42.0), IOSuccess(10.0), IOFailure(50)]
 )
-def test_ioresult_pattern_matching(container: IOResult[float, int]):
+def test_ioresult_pattern_matching(container):
     """Ensures ``IOResult`` containers work properly with pattern matching."""
     match container:
         case IOSuccess(Success(42.0)):

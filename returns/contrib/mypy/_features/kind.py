@@ -1,13 +1,6 @@
-from collections.abc import Sequence
 from enum import StrEnum, unique
 
 from mypy.checkmember import analyze_member_access
-from mypy.plugin import (
-    AttributeContext,
-    FunctionContext,
-    MethodContext,
-    MethodSigContext,
-)
 from mypy.typeops import bind_self
 from mypy.types import (
     AnyType,
@@ -20,16 +13,13 @@ from mypy.types import (
     TypeVarType,
     get_proper_type,
 )
-from mypy.types import Type as MypyType
 
 from returns.contrib.mypy._typeops.fallback import asserts_fallback_to_any
 from returns.contrib.mypy._typeops.visitor import translate_kind_instance
 
-# TODO: probably we can validate `KindN[]` creation during `get_analtype`
-
 
 @asserts_fallback_to_any
-def attribute_access(ctx: AttributeContext) -> MypyType:
+def attribute_access(ctx):
     """
     Ensures that attribute access to ``KindN`` is correct.
 
@@ -49,32 +39,30 @@ def attribute_access(ctx: AttributeContext) -> MypyType:
     """
     assert isinstance(ctx.type, Instance)
     instance = get_proper_type(ctx.type.args[0])
-
     if isinstance(instance, TypeVarType):
         bound = get_proper_type(instance.upper_bound)
         assert isinstance(bound, Instance)
         accessed = bound.copy_modified(
-            args=_crop_kind_args(ctx.type, bound.args),
+            args=_crop_kind_args(ctx.type, bound.args)
         )
     elif isinstance(instance, Instance):
         accessed = instance.copy_modified(args=_crop_kind_args(ctx.type))
     else:
         return ctx.default_attr_type
-
     return analyze_member_access(
-        ctx.context.name,  # type: ignore
+        ctx.context.name,
         accessed,
         ctx.context,
         is_lvalue=False,
         is_super=False,
         is_operator=False,
         original_type=instance,
-        chk=ctx.api,  # type: ignore
-        in_literal_context=ctx.api.expr_checker.is_literal_context(),  # type: ignore
+        chk=ctx.api,
+        in_literal_context=ctx.api.expr_checker.is_literal_context(),
     )
 
 
-def dekind(ctx: FunctionContext) -> MypyType:
+def dekind(ctx):
     """
     Infers real type behind ``Kind`` form.
 
@@ -85,19 +73,16 @@ def dekind(ctx: FunctionContext) -> MypyType:
     So, ``dekind(KindN[T, int])`` will fail.
     """
     kind = get_proper_type(ctx.arg_types[0][0])
-    assert isinstance(kind, Instance)  # mypy requires these lines
-
+    assert isinstance(kind, Instance)
     kind_inst = get_proper_type(kind.args[0])
-
     if not isinstance(kind_inst, Instance):
         ctx.api.fail(_KindErrors.dekind_not_instance, ctx.context)
         return AnyType(TypeOfAny.from_error)
-
     return kind_inst.copy_modified(args=_crop_kind_args(kind))
 
 
 @asserts_fallback_to_any
-def kinded_signature(ctx: MethodSigContext) -> CallableType:
+def kinded_signature(ctx):
     """
     Returns the internal function wrapped as ``Kinded[def]``.
 
@@ -105,20 +90,15 @@ def kinded_signature(ctx: MethodSigContext) -> CallableType:
     See :class:`returns.primitives.hkt.Kinded` for more information.
     """
     assert isinstance(ctx.type, Instance)
-
     wrapped_method = get_proper_type(ctx.type.args[0])
     assert isinstance(wrapped_method, FunctionLike)
-
     if isinstance(wrapped_method, Overloaded):
         return ctx.default_signature
-
     assert isinstance(wrapped_method, CallableType)
     return wrapped_method
 
 
-# TODO: we should raise an error if bound type does not have any `KindN`
-# instances, because that's not how `@kinded` and `Kinded[]` should be used.
-def kinded_call(ctx: MethodContext) -> MypyType:
+def kinded_call(ctx):
     """
     Reveals the correct return type of ``Kinded.__call__`` method.
 
@@ -136,21 +116,18 @@ def kinded_call(ctx: MethodContext) -> MypyType:
 
 
 @asserts_fallback_to_any
-def kinded_get_descriptor(ctx: MethodContext) -> MypyType:
+def kinded_get_descriptor(ctx):
     """
     Used to analyze ``@kinded`` method calls.
 
     We do this due to ``__get__`` descriptor magic.
     """
     assert isinstance(ctx.type, Instance)
-
     wrapped_method = get_proper_type(ctx.type.args[0])
     assert isinstance(wrapped_method, CallableType)
-
     self_type = get_proper_type(wrapped_method.arg_types[0])
     signature = bind_self(
-        wrapped_method,
-        is_classmethod=isinstance(self_type, TypeType),
+        wrapped_method, is_classmethod=isinstance(self_type, TypeType)
     )
     return ctx.type.copy_modified(args=[signature])
 
@@ -164,11 +141,8 @@ class _KindErrors(StrEnum):
     )
 
 
-def _crop_kind_args(
-    kind: Instance,
-    limit: Sequence[MypyType] | None = None,
-) -> tuple[MypyType, ...]:
+def _crop_kind_args(kind, limit=None):
     """Returns the correct amount of type arguments for a kind."""
     if limit is None:
-        limit = kind.args[0].args  # type: ignore
+        limit = kind.args[0].args
     return kind.args[1 : len(limit) + 1]

@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING, ClassVar, TypeVar, final
+from typing import TYPE_CHECKING, TypeVar, final
 
 from returns.interfaces.specific import reader, result
-from returns.primitives.hkt import KindN
 from returns.primitives.laws import (
-    Law,
     Law2,
     Lawful,
     LawSpecDef,
@@ -15,21 +12,16 @@ from returns.primitives.laws import (
 )
 
 if TYPE_CHECKING:
-    from returns.context import Reader, ReaderResult  # noqa: WPS433
-    from returns.result import Result  # noqa: F401, WPS433
-
+    pass
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _ValueType = TypeVar('_ValueType')
 _ErrorType = TypeVar('_ErrorType')
 _EnvType = TypeVar('_EnvType')
-
 _ReaderResultLikeType = TypeVar(
-    '_ReaderResultLikeType',
-    bound='ReaderResultLikeN',
+    '_ReaderResultLikeType', bound='ReaderResultLikeN'
 )
 
 
@@ -46,33 +38,20 @@ class ReaderResultLikeN(
     __slots__ = ()
 
     @abstractmethod
-    def bind_context_result(
-        self: _ReaderResultLikeType,
-        function: Callable[
-            [_FirstType],
-            ReaderResult[_UpdatedType, _SecondType, _ThirdType],
-        ],
-    ) -> KindN[_ReaderResultLikeType, _UpdatedType, _SecondType, _ThirdType]:
+    def bind_context_result(self, function):
         """Binds a ``ReaderResult`` returning function over a container."""
 
     @classmethod
     @abstractmethod
-    def from_failed_context(
-        cls: type[_ReaderResultLikeType],
-        inner_value: Reader[_ErrorType, _EnvType],
-    ) -> KindN[_ReaderResultLikeType, _FirstType, _ErrorType, _EnvType]:
+    def from_failed_context(cls, inner_value):
         """Unit method to create new containers from failed ``Reader``."""
 
     @classmethod
     @abstractmethod
-    def from_result_context(
-        cls: type[_ReaderResultLikeType],
-        inner_value: ReaderResult[_ValueType, _ErrorType, _EnvType],
-    ) -> KindN[_ReaderResultLikeType, _ValueType, _ErrorType, _EnvType]:
+    def from_result_context(cls, inner_value):
         """Unit method to create new containers from ``ReaderResult``."""
 
 
-#: Type alias for kinds with three type arguments.
 ReaderResultLike3 = ReaderResultLikeN[_FirstType, _SecondType, _ThirdType]
 
 
@@ -87,22 +66,16 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def purity_law(
-        container: ReaderResultBasedN[_FirstType, _SecondType, _ThirdType],
-        env: _ThirdType,
-    ) -> None:
+    def purity_law(container, env):
         """Calling a ``Reader`` twice has the same result with the same env."""
         assert container(env) == container(env)
 
     @law_definition
-    def asking_law(
-        container: ReaderResultBasedN[_FirstType, _SecondType, _ThirdType],
-        env: _ThirdType,
-    ) -> None:
+    def asking_law(container, env):
         """Asking for an env, always returns the env."""
-        assert container.ask().__call__(  # noqa: PLC2801
-            env,
-        ) == container.from_value(env).__call__(env)  # noqa: PLC2801
+        assert container.ask().__call__(env) == container.from_value(
+            env
+        ).__call__(env)
 
 
 class ReaderResultBasedN(
@@ -111,7 +84,6 @@ class ReaderResultBasedN(
         _FirstType,
         _SecondType,
         _ThirdType,
-        # Calls:
         'Result[_FirstType, _SecondType]',
         _ThirdType,
     ],
@@ -127,12 +99,7 @@ class ReaderResultBasedN(
     """
 
     __slots__ = ()
-
-    _laws: ClassVar[Sequence[Law]] = (
-        Law2(_LawSpec.purity_law),
-        Law2(_LawSpec.asking_law),
-    )
+    _laws = (Law2(_LawSpec.purity_law), Law2(_LawSpec.asking_law))
 
 
-#: Type alias for kinds with three type arguments.
 ReaderResultBased3 = ReaderResultBasedN[_FirstType, _SecondType, _ThirdType]

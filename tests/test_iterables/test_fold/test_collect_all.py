@@ -1,15 +1,13 @@
 import sys
-from collections.abc import Iterable, Sequence
 
 import pytest
 
 from returns.context import (
-    NoDeps,
     ReaderFutureResult,
     ReaderIOResult,
     ReaderResult,
 )
-from returns.future import FutureFailure, FutureResult, FutureSuccess
+from returns.future import FutureFailure, FutureSuccess
 from returns.io import IOFailure, IOSuccess
 from returns.iterables import Fold
 from returns.maybe import Nothing, Some
@@ -29,19 +27,13 @@ from returns.result import Failure, Success
         ([], Success(())),
         ([Success(1)], Success((1,))),
         ([Success(1), Success(2)], Success((1, 2))),
-        (
-            [Failure('a'), Success(1), Success(2)],
-            Success((1, 2)),
-        ),
+        ([Failure('a'), Success(1), Success(2)], Success((1, 2))),
         ([Success(1), Failure('b')], Success((1,))),
         ([Failure('a'), Failure('b')], Success(())),
         ([], IOSuccess(())),
         ([IOSuccess(1)], IOSuccess((1,))),
         ([IOSuccess(1), IOSuccess(2)], IOSuccess((1, 2))),
-        (
-            [IOFailure('a'), IOSuccess(1), IOSuccess(2)],
-            IOSuccess((1, 2)),
-        ),
+        ([IOFailure('a'), IOSuccess(1), IOSuccess(2)], IOSuccess((1, 2))),
         ([IOSuccess(1), IOFailure('b')], IOSuccess((1,))),
         ([IOFailure('a'), IOFailure('b')], IOSuccess(())),
     ],
@@ -97,21 +89,15 @@ def test_collect_all_result(iterable, sequence):
 )
 def test_collect_all_reader_result(iterable, sequence):
     """Iterable for ``ReaderResult`` and ``Fold``."""
-    assert Fold.collect_all(
-        iterable,
-        sequence.from_value(()),
-    )(...) == sequence(...)
+    assert Fold.collect_all(iterable, sequence.from_value(()))(...) == sequence(
+        ...
+    )
 
 
 @pytest.mark.anyio
 async def test_collect_all_reader_future_result(subtests):
     """Iterable for ``ReaderFutureResult`` and ``Fold``."""
-    containers: list[
-        tuple[  # noqa: WPS234
-            Iterable[ReaderFutureResult[int, str, NoDeps]],
-            ReaderFutureResult[Sequence[int], str, NoDeps],
-        ]
-    ] = [
+    containers = [
         ([], ReaderFutureResult.from_value(())),
         (
             [ReaderFutureResult.from_value(1)],
@@ -142,21 +128,15 @@ async def test_collect_all_reader_future_result(subtests):
     ]
     for iterable, sequence in containers:
         with subtests.test(iterable=iterable, sequence=sequence):
-            assert await Fold.collect_all(
-                iterable,
-                sequence.from_value(()),
-            )(...) == await sequence(...)
+            assert await Fold.collect_all(iterable, sequence.from_value(()))(
+                ...
+            ) == await sequence(...)
 
 
 @pytest.mark.anyio
 async def test_collect_all_future_result(subtests):
     """Iterable for ``FutureResult`` and ``Fold``."""
-    containers: list[
-        tuple[  # noqa: WPS234
-            Iterable[FutureResult[int, str]],
-            FutureResult[Sequence[int], str],
-        ]
-    ] = [
+    containers = [
         ([], FutureSuccess(())),
         ([FutureSuccess(1)], FutureSuccess((1,))),
         ([FutureSuccess(1), FutureSuccess(2)], FutureSuccess((1, 2))),
@@ -169,10 +149,7 @@ async def test_collect_all_future_result(subtests):
     for iterable, sequence in containers:
         with subtests.test(iterable=iterable, sequence=sequence):
             assert (
-                await Fold.collect_all(
-                    iterable,
-                    sequence.from_value(()),
-                )
+                await Fold.collect_all(iterable, sequence.from_value(()))
                 == await sequence
             )
 

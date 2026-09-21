@@ -1,15 +1,11 @@
-from collections.abc import Iterator
 from itertools import starmap
-from typing import Final, final
+from typing import final
 
 from mypy.nodes import ARG_STAR, ARG_STAR2
-from mypy.plugin import FunctionContext
 from mypy.types import (
     CallableType,
-    FunctionLike,
     Instance,
     Overloaded,
-    ProperType,
     TypeType,
     get_proper_type,
 )
@@ -27,15 +23,10 @@ from returns.contrib.mypy._typeops.transform_callable import (
     proper_type,
 )
 
-_SUPPORTED_TYPES: Final = (
-    CallableType,
-    Instance,
-    TypeType,
-    Overloaded,
-)
+_SUPPORTED_TYPES = (CallableType, Instance, TypeType, Overloaded)
 
 
-def analyze(ctx: FunctionContext) -> ProperType:
+def analyze(ctx):
     """
     This hook is used to make typed curring a thing in `returns` project.
 
@@ -51,27 +42,19 @@ def analyze(ctx: FunctionContext) -> ProperType:
     default_return = get_proper_type(ctx.default_return_type)
     if not isinstance(default_return, CallableType):
         return default_return
-
     function_def = get_proper_type(ctx.arg_types[0][0])
     func_args = _AppliedArgs(ctx)
-
     if len(list(filter(len, ctx.arg_types))) == 1:
-        return function_def  # this means, that `partial(func)` is called
+        return function_def
     if not isinstance(function_def, _SUPPORTED_TYPES):
         return default_return
     if isinstance(function_def, Instance | TypeType):
-        # We force `Instance` and similar types to coercse to callable:
         function_def = func_args.get_callable_from_context()
-
     is_valid, applied_args = func_args.build_from_context()
     if not isinstance(function_def, CallableType | Overloaded) or not is_valid:
         return default_return
-
     return _PartialFunctionReducer(
-        default_return,
-        function_def,
-        applied_args,
-        ctx,
+        default_return, function_def, applied_args, ctx
     ).new_partial()
 
 
@@ -102,13 +85,7 @@ class _PartialFunctionReducer:
     That's not an easy plugin to work with.
     """
 
-    def __init__(
-        self,
-        default_return_type: FunctionLike,
-        original: FunctionLike,
-        applied_args: list[FuncArg],
-        ctx: FunctionContext,
-    ) -> None:
+    def __init__(self, default_return_type, original, applied_args, ctx):
         """
         Saving the things we need.
 
@@ -123,11 +100,10 @@ class _PartialFunctionReducer:
         self._original = original
         self._applied_args = applied_args
         self._ctx = ctx
+        self._case_functions = []
+        self._fallbacks = []
 
-        self._case_functions: list[CallableType] = []
-        self._fallbacks: list[CallableType] = []
-
-    def new_partial(self) -> ProperType:
+    def new_partial(self):
         """
         Creates new partial functions.
 
@@ -138,60 +114,35 @@ class _PartialFunctionReducer:
         for case_function in self._original.items:
             fallback, intermediate = self._create_intermediate(case_function)
             self._fallbacks.append(fallback)
-
             if intermediate:
                 partial = self._create_partial_case(
-                    case_function,
-                    intermediate,
-                    fallback,
+                    case_function, intermediate, fallback
                 )
                 self._case_functions.append(partial)
         return self._create_new_partial()
 
-    def _create_intermediate(
-        self,
-        case_function: CallableType,
-    ) -> tuple[CallableType, CallableType | None]:
+    def _create_intermediate(self, case_function):
         intermediate = Intermediate(case_function).with_applied_args(
-            self._applied_args,
+            self._applied_args
         )
-        return intermediate, analyze_call(
+        return (
             intermediate,
-            self._applied_args,
-            self._ctx,
-            show_errors=False,
+            analyze_call(
+                intermediate, self._applied_args, self._ctx, show_errors=False
+            ),
         )
 
-    def _create_partial_case(
-        self,
-        case_function: CallableType,
-        intermediate: CallableType,
-        fallback: CallableType,
-    ) -> CallableType:
+    def _create_partial_case(self, case_function, intermediate, fallback):
         partial = CallableInference(
             Functions(case_function, intermediate).diff(self._applied_args),
             self._ctx,
             fallback=fallback,
         ).from_usage(self._applied_args)
-
         if case_function.is_generic():
-            # We can deal with really different `case_function` over here.
-            # The first one is regular `generic` function
-            # that has variables and typevars in its spec.
-            # In this case, we process `partial` the same way.
-            # It should be generic also.
-            #
-            # The second possible type of `case_function` is pseudo-generic.
-            # These are functions that contain typevars in its spec,
-            # but variables are empty.
-            # Probably these functions are already used in a generic context.
-            # So, we ignore them and do not add variables back.
-            #
-            # Regular functions are also untouched by this.
             return detach_callable(partial)
         return partial.copy_modified(variables=[])
 
-    def _create_new_partial(self) -> ProperType:
+    def _create_new_partial(self):
         """
         Creates a new partial function-like from set of callables.
 
@@ -215,7 +166,7 @@ class _PartialFunctionReducer:
 class _AppliedArgs:
     """Builds applied args that were partially applied."""
 
-    def __init__(self, function_ctx: FunctionContext) -> None:
+    def __init__(self, function_ctx):
         """
         We need the function default context.
 
@@ -230,16 +181,15 @@ class _AppliedArgs:
             strict=False,
         )
 
-    def get_callable_from_context(self) -> ProperType:
+    def get_callable_from_context(self):
         """Returns callable type from the context."""
         return get_proper_type(
             safe_translate_to_function(
-                self._function_ctx.arg_types[0][0],
-                self._function_ctx,
+                self._function_ctx.arg_types[0][0], self._function_ctx
             )
         )
 
-    def build_from_context(self) -> tuple[bool, list[FuncArg]]:
+    def build_from_context(self):
         """
         Builds handy arguments structures from the context.
 
@@ -260,11 +210,9 @@ class _AppliedArgs:
                 zip(names, types, kinds, strict=False)
             ):
                 if arg.kind in {ARG_STAR, ARG_STAR2}:
-                    # We cannot really work with `*args`, `**kwargs`.
-                    return False, []
-
+                    return (False, [])
                 applied_args.append(arg)
-        return True, applied_args
+        return (True, applied_args)
 
-    def _generate_applied_args(self, arg_parts) -> Iterator[FuncArg]:
+    def _generate_applied_args(self, arg_parts):
         yield from starmap(FuncArg, arg_parts)
