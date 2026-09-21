@@ -7,7 +7,7 @@ from mypy.types import AnyType, TypeOfAny
 _CallableType = TypeVar('_CallableType', bound=Callable)
 
 
-def asserts_fallback_to_any(function: _CallableType) -> _CallableType:
+def asserts_fallback_to_any(function):
     """
     Falls back to ``Any`` when some ``assert ...`` fails in our plugin code.
 
@@ -24,7 +24,6 @@ def asserts_fallback_to_any(function: _CallableType) -> _CallableType:
         try:
             return function(*args, **kwargs)
         except AssertionError:
-            # TODO: log it somehow
             return AnyType(TypeOfAny.implementation_artifact)
 
-    return decorator  # type: ignore
+    return decorator

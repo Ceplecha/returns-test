@@ -11,13 +11,11 @@ HKTs.
 """
 
 from abc import abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import (
     Any,
-    ClassVar,
     Generic,
     Never,
-    TypeAlias,
     TypeVar,
     final,
     get_args,
@@ -28,15 +26,13 @@ from hypothesis import strategies as st
 
 from returns.contrib.hypothesis.containers import strategy_from_container
 from returns.contrib.hypothesis.laws import check_all_laws
-from returns.contrib.hypothesis.type_resolver import StrategyFactory
 from returns.interfaces.applicative import ApplicativeN
 from returns.interfaces.specific.maybe import MaybeLike2
 from returns.maybe import Maybe
 from returns.primitives.asserts import assert_equal
 from returns.primitives.container import BaseContainer
-from returns.primitives.hkt import Kind1, KindN, SupportsKind1
+from returns.primitives.hkt import KindN, SupportsKind1
 from returns.primitives.laws import (
-    Law,
     Law2,
     Lawful,
     LawSpecDef,
@@ -47,7 +43,6 @@ from returns.result import Result
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _ValueType = TypeVar('_ValueType')
 _F_Applicative = TypeVar('_F_Applicative', bound=ApplicativeN)
 
@@ -59,10 +54,7 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def idempotence_law(
-        some_identity: '_SomeIdentityN',
-        make_container: Callable[[], Kind1[_F_Applicative, _SecondType]],
-    ) -> None:
+    def idempotence_law(some_identity, make_container):
         """Applying twice should give the same value as applying once.
 
         NOTE: We use a `Callable` to generate the container so that we can
@@ -83,18 +75,14 @@ class _SomeIdentityN(
     """Dummy interface that does nothing to an `Applicative` container."""
 
     __slots__ = ()
+    _laws = (Law2(_LawSpec.idempotence_law),)
 
-    _laws: ClassVar[Sequence[Law]] = (Law2(_LawSpec.idempotence_law),)
-
-    @abstractmethod  # noqa: WPS125
-    def do_nothing(
-        self,
-        container: Kind1[_F_Applicative, _ValueType],
-    ) -> Kind1[_F_Applicative, _ValueType]:
+    @abstractmethod
+    def do_nothing(self, container):
         """No-op method that returns the container."""
 
 
-_SomeIdentity1: TypeAlias = _SomeIdentityN[_FirstType, Never, Never]
+_SomeIdentity1 = _SomeIdentityN[_FirstType, Never, Never]
 
 
 class _Wrapper(
@@ -104,41 +92,33 @@ class _Wrapper(
 ):
     """Simple instance of `_SomeIdentityN`."""
 
-    _inner_value: _FirstType
-
-    def __init__(self, inner_value: _FirstType) -> None:
+    def __init__(self, inner_value):
         super().__init__(inner_value)
 
-    def do_nothing(
-        self,
-        container: Kind1[_F_Applicative, _ValueType],
-    ) -> Kind1[_F_Applicative, _ValueType]:
+    def do_nothing(self, container):
         """No-op method that returns the container."""
         return container
 
 
-def _callable_strategy(
-    arg1: type[object], arg2: type[object]
-) -> StrategyFactory[Callable]:
+def _callable_strategy(arg1, arg2):
     type_arg1 = int if arg1 == Any else arg1
     type_arg2 = int if arg2 == Any else arg2
     return_results = st.functions(
         pure=True,
-        returns=strategy_from_container(Result)(Result[type_arg1, type_arg2]),  # type: ignore[valid-type]
+        returns=strategy_from_container(Result)(Result[type_arg1, type_arg2]),
     )
     return_maybes = st.functions(
         pure=True,
         returns=strategy_from_container(Maybe)(
-            MaybeLike2[type_arg1, type_arg2]  # type: ignore[valid-type]
+            MaybeLike2[type_arg1, type_arg2]
         ),
     )
     return st.one_of(return_results, return_maybes)
 
 
-def _callable_factory(thing: type[object]) -> StrategyFactory[Callable]:
+def _callable_factory(thing):
     if get_origin(thing) != Callable:
         raise NotImplementedError
-
     match get_args(thing):
         case [[], return_type] if (
             get_origin(return_type) == KindN
@@ -150,10 +130,7 @@ def _callable_factory(thing: type[object]) -> StrategyFactory[Callable]:
             raise NotImplementedError
 
 
-type_strategies: dict[type[object], StrategyFactory] = {
-    Callable: _callable_factory  # type: ignore[dict-item]
-}
-
+type_strategies = {Callable: _callable_factory}
 check_all_laws(
     _Wrapper,
     container_strategy=st.builds(_Wrapper, st.integers()),

@@ -1,15 +1,14 @@
-from returns.maybe import Maybe, Nothing, Some
+from returns.maybe import Nothing, Some
 
 
 def test_bind_some():
     """Ensures that bind works correctly."""
 
-    def factory(inner_value: int) -> Maybe[int]:
+    def factory(inner_value):
         return Some(inner_value * 2)
 
     input_value = 5
     bound = Some(input_value).bind(factory)
-
     assert bound == factory(input_value)
     assert str(bound) == '<Some: 10>'
 
@@ -17,7 +16,7 @@ def test_bind_some():
 def test_bind_optional():
     """Ensures that bind_optional works correctly."""
 
-    def factory(inner_value: int) -> int | None:
+    def factory(inner_value):
         return inner_value or None
 
     assert Some(1).bind_optional(factory) == Some(1)

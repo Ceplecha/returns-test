@@ -9,14 +9,9 @@ class _CustomError(Exception):
 
 
 @pytest.mark.parametrize(
-    'exception_type',
-    [
-        TypeError,
-        ValueError,
-        _CustomError,
-    ],
+    'exception_type', [TypeError, ValueError, _CustomError]
 )
-def test_raise_regular_exception(exception_type: type[Exception]):
+def test_raise_regular_exception(exception_type):
     """Ensures that regular exception can be thrown."""
     with pytest.raises(exception_type):
         raise_exception(exception_type())

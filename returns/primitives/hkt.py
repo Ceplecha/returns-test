@@ -7,17 +7,10 @@ _InstanceType_co = TypeVar('_InstanceType_co', covariant=True)
 _TypeArgType1_co = TypeVar('_TypeArgType1_co', covariant=True)
 _TypeArgType2_co = TypeVar('_TypeArgType2_co', covariant=True)
 _TypeArgType3_co = TypeVar('_TypeArgType3_co', covariant=True)
-
 _FunctionDefType_co = TypeVar(
-    '_FunctionDefType_co',
-    bound=Callable,
-    covariant=True,  # This is a must! Otherwise it would not work.
+    '_FunctionDefType_co', bound=Callable, covariant=True
 )
-_FunctionType = TypeVar(
-    '_FunctionType',
-    bound=Callable,
-)
-
+_FunctionType = TypeVar('_FunctionType', bound=Callable)
 _UpdatedType = TypeVar('_UpdatedType')
 _TypeVars = TypeVarTuple('_TypeVars')
 
@@ -85,10 +78,9 @@ class KindN(Generic[_InstanceType_co, *_TypeVars]):
     """
 
     __slots__ = ()
+    if TYPE_CHECKING:
 
-    if TYPE_CHECKING:  # noqa: WPS604 # pragma: no cover
-
-        def __getattr__(self, attrname: str):
+        def __getattr__(self, attrname):
             """
             This function is required for ``get_attribute_hook`` in mypy plugin.
 
@@ -97,13 +89,8 @@ class KindN(Generic[_InstanceType_co, *_TypeVars]):
             """
 
 
-#: Type alias for kinds with one type argument.
 Kind1 = KindN[_InstanceType_co, _TypeArgType1_co, Any, Any]
-
-#: Type alias for kinds with two type arguments.
 Kind2 = KindN[_InstanceType_co, _TypeArgType1_co, _TypeArgType2_co, Any]
-
-#: Type alias for kinds with three type arguments.
 Kind3 = KindN[
     _InstanceType_co, _TypeArgType1_co, _TypeArgType2_co, _TypeArgType3_co
 ]
@@ -126,39 +113,17 @@ class SupportsKindN(KindN[_InstanceType_co, *_TypeVars]):
 
     __slots__ = ()
 
-    __getattr__: None  # type: ignore
 
-
-#: Type alias used for inheritance with one type argument.
-SupportsKind1 = SupportsKindN[
-    _InstanceType_co,
-    _TypeArgType1_co,
-    Never,
-    Never,
-]
-
-#: Type alias used for inheritance with two type arguments.
+SupportsKind1 = SupportsKindN[_InstanceType_co, _TypeArgType1_co, Never, Never]
 SupportsKind2 = SupportsKindN[
-    _InstanceType_co,
-    _TypeArgType1_co,
-    _TypeArgType2_co,
-    Never,
+    _InstanceType_co, _TypeArgType1_co, _TypeArgType2_co, Never
 ]
-
-#: Type alias used for inheritance with three type arguments.
 SupportsKind3 = SupportsKindN[
-    _InstanceType_co,
-    _TypeArgType1_co,
-    _TypeArgType2_co,
-    _TypeArgType3_co,
+    _InstanceType_co, _TypeArgType1_co, _TypeArgType2_co, _TypeArgType3_co
 ]
 
 
-def dekind(
-    kind: KindN[
-        _InstanceType_co, _TypeArgType1_co, _TypeArgType2_co, _TypeArgType3_co
-    ],
-) -> _InstanceType_co:
+def dekind(kind):
     """
     Turns ``Kind1[IO, int]`` type into real ``IO[int]`` type.
 
@@ -183,22 +148,10 @@ def dekind(
     However, please, do not use this function
     unless you know exactly what you are doing and why do you need it.
     """
-    return kind  # type: ignore
+    return kind
 
 
-# Utils to define kinded functions
-# ================================
-
-
-# TODO: in the future we would be able to write a custom plugin
-# with `transform_kind(T) -> T'` support.
-# It would visit all the possible `KindN[]` types in any type and run `dekind`
-# on them, so this will be how it works:
-# in:  => Callable[[KindN[IO[Any], int]], KindN[IO[Any], str]]
-# out: => Callable[[IO[int]], IO[str]]
-# This will allow to have better support for callable protocols and similar.
-# Blocked by: https://github.com/python/mypy/issues/9001
-class Kinded(Protocol[_FunctionDefType_co]):  # type: ignore
+class Kinded(Protocol[_FunctionDefType_co]):
     """
     Protocol that tracks kinded functions calls.
 
@@ -207,19 +160,13 @@ class Kinded(Protocol[_FunctionDefType_co]):  # type: ignore
     """
 
     __slots__ = ()
-
-    #: Used to translate `KindN` into real types.
     __call__: _FunctionDefType_co
 
-    def __get__(
-        self,
-        instance: _UpdatedType,
-        type_,
-    ) -> Callable[..., _UpdatedType]:
+    def __get__(self, instance, type_):
         """Used to decorate and properly analyze method calls."""
 
 
-def kinded(function: _FunctionType) -> Kinded[_FunctionType]:
+def kinded(function):
     """
     Decorator to be used when you want to dekind the function's return type.
 
@@ -274,4 +221,4 @@ def kinded(function: _FunctionType) -> Kinded[_FunctionType]:
 
     You must use this decorator for your own kinded functions as well.
     """
-    return function  # type: ignore
+    return function
