@@ -46,7 +46,7 @@ def flatten(
         - https://bit.ly/2sIviUr
 
     """
-    return container.bind(identity)
+    return container.map(identity)
 
 
 def result_to_maybe(
