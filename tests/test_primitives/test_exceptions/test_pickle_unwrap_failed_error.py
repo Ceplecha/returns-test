@@ -1,4 +1,4 @@
-import pickle  # noqa: S403
+import pickle
 
 from returns.maybe import Nothing
 from returns.primitives.exceptions import UnwrapFailedError
@@ -9,11 +9,10 @@ def test_pickle_unwrap_failed_error_from_maybe():
     """Ensures that UnwrapFailedError with Maybe can be pickled."""
     serialized = None
     try:
-        Nothing.unwrap()  # This will raise UnwrapFailedError
+        Nothing.unwrap()
     except UnwrapFailedError as error:
         serialized = pickle.dumps(error)
-
-    deserialized_error = pickle.loads(serialized)  # noqa: S301
+    deserialized_error = pickle.loads(serialized)
     assert deserialized_error.halted_container == Nothing
 
 
@@ -21,9 +20,8 @@ def test_pickle_unwrap_failed_error_from_result():
     """Ensures that UnwrapFailedError with Result can be pickled."""
     serialized = None
     try:
-        Failure('error').unwrap()  # This will raise UnwrapFailedError
+        Failure('error').unwrap()
     except UnwrapFailedError as error:
         serialized = pickle.dumps(error)
-
-    deserialized_error = pickle.loads(serialized)  # noqa: S301
+    deserialized_error = pickle.loads(serialized)
     assert deserialized_error.halted_container == Failure('error')

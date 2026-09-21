@@ -1,7 +1,7 @@
 from returns.io import IO, impure
 
 
-def _fake_impure_function(some_param: int) -> int:
+def _fake_impure_function(some_param):
     return some_param
 
 
