@@ -1,24 +1,21 @@
 """Make `hypothesis` resolve types to the right strategies."""
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import TypeAlias, TypeVar
+from typing import TypeVar
 
 from hypothesis import strategies as st
-from hypothesis.strategies._internal import types  # noqa: PLC2701
+from hypothesis.strategies._internal import types
 
 Example_co = TypeVar('Example_co', covariant=True)
-
-StrategyFactory: TypeAlias = (
+StrategyFactory = (
     st.SearchStrategy[Example_co]
     | Callable[[type[Example_co]], st.SearchStrategy[Example_co]]
 )
 
 
 @contextmanager
-def strategies_for_types(
-    mapping: Mapping[type[object], StrategyFactory],
-) -> Iterator[None]:
+def strategies_for_types(mapping):
     """
     Temporarily register strategies with `hypothesis`.
 
@@ -32,11 +29,10 @@ def strategies_for_types(
     we can easily have unintentional side-effects. We have to be very careful
     when modifying it.
     """
-    previous_strategies: dict[type[object], StrategyFactory | None] = {}
+    previous_strategies = {}
     for type_, strategy in mapping.items():
         previous_strategies[type_] = look_up_strategy(type_)
         st.register_type_strategy(type_, strategy)
-
     try:
         yield
     finally:
@@ -47,29 +43,23 @@ def strategies_for_types(
                 st.register_type_strategy(type_, previous_strategy)
 
 
-def look_up_strategy(
-    type_: type[Example_co],
-) -> StrategyFactory[Example_co] | None:
+def look_up_strategy(type_):
     """Return the strategy used by `hypothesis`."""
-    return types._global_type_lookup.get(type_)  # noqa: SLF001
+    return types._global_type_lookup.get(type_)
 
 
-def _remove_strategy(
-    type_: type[object],
-) -> None:
+def _remove_strategy(type_):
     """Remove the strategy registered for `type_`."""
-    types._global_type_lookup.pop(type_)  # noqa: SLF001
+    types._global_type_lookup.pop(type_)
     _clean_caches()
 
 
-def apply_strategy(
-    strategy: StrategyFactory[Example_co], type_: type[Example_co]
-) -> StrategyFactory[Example_co]:
+def apply_strategy(strategy, type_):
     """Apply `strategy` to `type_`."""
     if isinstance(strategy, st.SearchStrategy):
         return strategy
     return strategy(type_)
 
 
-def _clean_caches() -> None:
-    st.from_type.__clear_cache()  # type: ignore[attr-defined]  # noqa: SLF001
+def _clean_caches():
+    st.from_type.__clear_cache()

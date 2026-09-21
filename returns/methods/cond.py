@@ -1,39 +1,23 @@
 from typing import TypeVar, overload
 
-from returns.context import NoDeps
 from returns.interfaces.failable import DiverseFailableN, SingleFailableN
-from returns.primitives.hkt import KindN, kinded
+from returns.primitives.hkt import kinded
 
 _ValueType = TypeVar('_ValueType')
 _ErrorType = TypeVar('_ErrorType')
-
 _SingleFailableKind = TypeVar('_SingleFailableKind', bound=SingleFailableN)
 _DiverseFailableKind = TypeVar('_DiverseFailableKind', bound=DiverseFailableN)
 
 
 @overload
-def internal_cond(
-    container_type: type[_SingleFailableKind],
-    is_success: bool,  # noqa: FBT001
-    success_value: _ValueType,
-) -> KindN[_SingleFailableKind, _ValueType, _ErrorType, NoDeps]: ...
+def internal_cond(container_type, is_success, success_value): ...
 
 
 @overload
-def internal_cond(
-    container_type: type[_DiverseFailableKind],
-    is_success: bool,  # noqa: FBT001
-    success_value: _ValueType,
-    error_value: _ErrorType,
-) -> KindN[_DiverseFailableKind, _ValueType, _ErrorType, NoDeps]: ...
+def internal_cond(container_type, is_success, success_value, error_value): ...
 
 
-def internal_cond(
-    container_type: (type[_SingleFailableKind] | type[_DiverseFailableKind]),
-    is_success: bool,  # noqa: FBT001
-    success_value: _ValueType,
-    error_value: _ErrorType | None = None,
-):
+def internal_cond(container_type, is_success, success_value, error_value=None):
     """
     Reduce the boilerplate when choosing paths.
 
@@ -73,11 +57,9 @@ def internal_cond(
     """
     if is_success:
         return container_type.from_value(success_value)
-
     if issubclass(container_type, DiverseFailableN):
         return container_type.from_failure(error_value)
     return container_type.empty
 
 
-#: Kinded version of :func:`~internal_cond`, use it to infer real return type.
 cond = kinded(internal_cond)

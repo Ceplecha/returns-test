@@ -1,17 +1,15 @@
-from collections.abc import Callable
 from functools import wraps
-from typing import Any, Never, TypeVar
+from typing import TypeVar
 
 from typing_extensions import ParamSpec
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _FuncParams = ParamSpec('_FuncParams')
 
 
-def identity(instance: _FirstType) -> _FirstType:
+def identity(instance):
     """
     Function that returns its argument.
 
@@ -31,10 +29,7 @@ def identity(instance: _FirstType) -> _FirstType:
     return instance
 
 
-def compose(
-    first: Callable[[_FirstType], _SecondType],
-    second: Callable[[_SecondType], _ThirdType],
-) -> Callable[[_FirstType], _ThirdType]:
+def compose(first, second):
     """
     Allows function composition.
 
@@ -51,9 +46,7 @@ def compose(
     return lambda argument: second(first(argument))
 
 
-def tap(
-    function: Callable[[_FirstType], Any],
-) -> Callable[[_FirstType], _FirstType]:
+def tap(function):
     """
     Allows to apply some function and return an argument, instead of a result.
 
@@ -71,16 +64,14 @@ def tap(
 
     """
 
-    def decorator(argument_to_return: _FirstType) -> _FirstType:
+    def decorator(argument_to_return):
         function(argument_to_return)
         return argument_to_return
 
     return decorator
 
 
-def untap(
-    function: Callable[[_FirstType], Any],
-) -> Callable[[_FirstType], None]:
+def untap(function):
     """
     Allows to apply some function and always return ``None`` as a result.
 
@@ -104,13 +95,13 @@ def untap(
 
     """
 
-    def decorator(argument_to_return: _FirstType) -> None:
+    def decorator(argument_to_return):
         function(argument_to_return)
 
     return decorator
 
 
-def raise_exception(exception: Exception) -> Never:
+def raise_exception(exception):
     """
     Helper function to raise exceptions as a function.
 
@@ -136,7 +127,7 @@ def raise_exception(exception: Exception) -> Never:
     raise exception
 
 
-def not_(function: Callable[_FuncParams, bool]) -> Callable[_FuncParams, bool]:
+def not_(function):
     """
     Denies the function returns.
 
@@ -153,10 +144,7 @@ def not_(function: Callable[_FuncParams, bool]) -> Callable[_FuncParams, bool]:
     """
 
     @wraps(function)
-    def decorator(
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> bool:
+    def decorator(*args, **kwargs):
         return not function(*args, **kwargs)
 
     return decorator

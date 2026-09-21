@@ -12,6 +12,4 @@ def test_nonequality():
 @pytest.mark.anyio
 async def test_equality():
     """Ensures that containers are not compared to regular values."""
-    assert await FutureResult.from_value(
-        2,
-    ) == await FutureResult.from_value(2)
+    assert await FutureResult.from_value(2) == await FutureResult.from_value(2)
