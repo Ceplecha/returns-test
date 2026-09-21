@@ -1608,10 +1608,7 @@ def future_safe(  # noqa: WPS212, WPS234,
             *args: _FuncParams.args,
             **kwargs: _FuncParams.kwargs,
         ) -> Result[_ValueType_co, _ExceptionType]:
-            try:
-                return Success(await function(*args, **kwargs))
-            except inner_exceptions as exc:
-                return Failure(exc)
+            pass
 
         @wraps(function)
         def decorator(
