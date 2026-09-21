@@ -1,51 +1,42 @@
 import pytest
 
-from returns.context import NoDeps, ReaderIOResult
+from returns.context import ReaderIOResult
 from returns.io import IOFailure, IOSuccess
 from returns.pipeline import managed
-from returns.result import Failure, Result, Success
+from returns.result import Failure, Success
 
 _acquire_success = ReaderIOResult.from_value('acquire success')
 _acquire_failure = ReaderIOResult.from_failure('acquire failure')
 
 
-def _use_success(inner_value: str) -> ReaderIOResult[str, str, NoDeps]:
+def _use_success(inner_value):
     return ReaderIOResult.from_value('use success')
 
 
-def _use_failure(inner_value: str) -> ReaderIOResult[str, str, NoDeps]:
+def _use_failure(inner_value):
     return ReaderIOResult.from_failure('use failure')
 
 
 class _ReleaseSuccess:
-    def __init__(self, logs: list[tuple[str, Result[str, str]]]) -> None:
+    def __init__(self, logs):
         self._logs = logs
 
-    def __call__(
-        self,
-        inner_value: str,
-        use_result: Result[str, str],
-    ) -> ReaderIOResult[None, str, NoDeps]:
+    def __call__(self, inner_value, use_result):
         self._logs.append((inner_value, use_result))
         return ReaderIOResult.from_value(None)
 
 
 class _ReleaseFailure:
-    def __init__(self, logs: list[tuple[str, Result[str, str]]]) -> None:
+    def __init__(self, logs):
         self._logs = logs
 
-    def __call__(
-        self,
-        inner_value: str,
-        use_result: Result[str, str],
-    ) -> ReaderIOResult[None, str, NoDeps]:
+    def __call__(self, inner_value, use_result):
         return ReaderIOResult.from_failure('release failure')
 
 
 @pytest.mark.parametrize(
     ('acquire', 'use', 'release', 'final_result', 'log'),
     [
-        # Acquire success:
         (
             _acquire_success,
             _use_success,
@@ -74,7 +65,6 @@ class _ReleaseFailure:
             IOFailure('release failure'),
             [],
         ),
-        # Acquire failure:
         (
             _acquire_failure,
             _use_success,
@@ -107,23 +97,17 @@ class _ReleaseFailure:
 )
 def test_all_success(acquire, use, release, final_result, log):
     """Ensures that managed works as intended."""
-    pipeline_logs: list[tuple[str, Result[str, str]]] = []
-    pipeline_result = managed(
-        use,
-        release(pipeline_logs),
-    )(acquire)
-
+    pipeline_logs = []
+    pipeline_result = managed(use, release(pipeline_logs))(acquire)
     assert pipeline_result(ReaderIOResult.no_args) == final_result
     assert pipeline_logs == log
 
 
 def test_full_typing():
     """This test is here to be a case for typing."""
-    logs: list[tuple[str, Result[str, str]]] = []
-    pipeline_result = managed(
-        _use_success,
-        _ReleaseSuccess(logs),
-    )(_acquire_success)
-
+    logs = []
+    pipeline_result = managed(_use_success, _ReleaseSuccess(logs))(
+        _acquire_success
+    )
     assert pipeline_result(ReaderIOResult.no_args) == IOSuccess('use success')
     assert logs == [('acquire success', Success('use success'))]
