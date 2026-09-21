@@ -26,10 +26,7 @@ def test_unwrap_iofailure_with_exception():
     expected_exception = ValueError('error')
     with pytest.raises(UnwrapFailedError) as excinfo:
         IOFailure(expected_exception).unwrap()
-
-    assert 'ValueError: error' in str(
-        excinfo.getrepr(),  # noqa: WPS441
-    )
+    assert 'ValueError: error' in str(excinfo.getrepr())
 
 
 def test_failure_iosuccess():

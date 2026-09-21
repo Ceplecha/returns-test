@@ -1,10 +1,4 @@
-def assert_equal(
-    first,
-    second,
-    *,
-    deps=None,
-    backend: str = 'asyncio',
-) -> None:
+def assert_equal(first, second, *, deps=None, backend='asyncio'):
     """
     Custom ``assert`` function to compare two any containers.
 
@@ -23,22 +17,16 @@ def assert_equal(
 
     By the way, ``anyio`` should be installed separately.
     """
-    assert _convert(
-        first,
-        deps=deps,
-        backend=backend,
-    ) == _convert(
-        second,
-        deps=deps,
-        backend=backend,
+    assert _convert(first, deps=deps, backend=backend) == _convert(
+        second, deps=deps, backend=backend
     ), f'{first} == {second}'
 
 
-def _convert(container, *, deps, backend: str):
-    from returns.interfaces.specific import future, reader  # noqa: PLC0415
+def _convert(container, *, deps, backend):
+    from returns.interfaces.specific import future, reader
 
     if isinstance(container, future.AwaitableFutureN):
-        import anyio  # noqa: PLC0415
+        import anyio
 
         return _convert(
             anyio.run(container.awaitable, backend=backend),
@@ -46,9 +34,5 @@ def _convert(container, *, deps, backend: str):
             backend=backend,
         )
     if isinstance(container, reader.Contextable):
-        return _convert(
-            container(deps),
-            deps=deps,
-            backend=backend,
-        )
+        return _convert(container(deps), deps=deps, backend=backend)
     return container

@@ -1,7 +1,7 @@
 import types
-from collections.abc import Callable, Iterator
-from contextlib import AbstractContextManager, contextmanager
-from inspect import FrameInfo, stack
+from collections.abc import Callable
+from contextlib import contextmanager
+from inspect import stack
 from typing import TypeVar, overload
 
 from returns.result import Failure
@@ -10,16 +10,14 @@ _FunctionType = TypeVar('_FunctionType', bound=Callable)
 
 
 @overload
-def collect_traces() -> AbstractContextManager[None]: ...
+def collect_traces(): ...
 
 
 @overload
-def collect_traces(function: _FunctionType) -> _FunctionType: ...
+def collect_traces(function): ...
 
 
-def collect_traces(
-    function: _FunctionType | None = None,
-) -> _FunctionType | AbstractContextManager[None]:
+def collect_traces(function=None):
     """
     Context Manager/Decorator to active traces collect to the Failures.
 
@@ -59,19 +57,19 @@ def collect_traces(
     """
 
     @contextmanager
-    def factory() -> Iterator[None]:
-        unpatched_get_trace = getattr(Failure, '_get_trace')  # noqa: B009
+    def factory():
+        unpatched_get_trace = getattr(Failure, '_get_trace')
         substitute_get_trace = types.MethodType(_get_trace, Failure)
-        setattr(Failure, '_get_trace', substitute_get_trace)  # noqa: B010
-        try:  # noqa: WPS501
+        setattr(Failure, '_get_trace', substitute_get_trace)
+        try:
             yield
         finally:
-            setattr(Failure, '_get_trace', unpatched_get_trace)  # noqa: B010
+            setattr(Failure, '_get_trace', unpatched_get_trace)
 
     return factory()(function) if function else factory()
 
 
-def _get_trace(_self: Failure) -> list[FrameInfo] | None:
+def _get_trace(_self):
     """
     Function to be used on Monkey Patching.
 

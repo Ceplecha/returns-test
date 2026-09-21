@@ -1,26 +1,17 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.specific.reader import ReaderLike2, ReaderLike3
-from returns.primitives.hkt import Kind2, Kind3, Kinded, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
 _UpdatedType = TypeVar('_UpdatedType')
-
 _Reader2Kind = TypeVar('_Reader2Kind', bound=ReaderLike2)
 _Reader3Kind = TypeVar('_Reader3Kind', bound=ReaderLike3)
 
 
-def modify_env2(
-    function: Callable[[_UpdatedType], _SecondType],
-) -> Kinded[
-    Callable[
-        [Kind2[_Reader2Kind, _FirstType, _SecondType]],
-        Kind2[_Reader2Kind, _FirstType, _UpdatedType],
-    ]
-]:
+def modify_env2(function):
     """
     Modifies the second type argument of a ``ReaderLike2``.
 
@@ -48,22 +39,13 @@ def modify_env2(
     """
 
     @kinded
-    def factory(
-        container: Kind2[_Reader2Kind, _FirstType, _SecondType],
-    ) -> Kind2[_Reader2Kind, _FirstType, _UpdatedType]:
+    def factory(container):
         return container.modify_env(function)
 
     return factory
 
 
-def modify_env3(
-    function: Callable[[_UpdatedType], _ThirdType],
-) -> Kinded[
-    Callable[
-        [Kind3[_Reader3Kind, _FirstType, _SecondType, _ThirdType]],
-        Kind3[_Reader3Kind, _FirstType, _SecondType, _UpdatedType],
-    ]
-]:
+def modify_env3(function):
     """
     Modifies the third type argument of a ``ReaderLike3``.
 
@@ -91,13 +73,10 @@ def modify_env3(
     """
 
     @kinded
-    def factory(
-        container: Kind3[_Reader3Kind, _FirstType, _SecondType, _ThirdType],
-    ) -> Kind3[_Reader3Kind, _FirstType, _SecondType, _UpdatedType]:
+    def factory(container):
         return container.modify_env(function)
 
     return factory
 
 
-#: Useful alias for :func:`~modify_env3`.
 modify_env = modify_env3

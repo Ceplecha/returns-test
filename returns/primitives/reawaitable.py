@@ -1,13 +1,12 @@
-from collections.abc import Awaitable, Callable, Generator
+from collections.abc import Awaitable
 from functools import wraps
 from typing import NewType, ParamSpec, TypeVar, cast, final
 
 _ValueType = TypeVar('_ValueType')
 _AwaitableT = TypeVar('_AwaitableT', bound=Awaitable)
 _Ps = ParamSpec('_Ps')
-
 _Sentinel = NewType('_Sentinel', object)
-_sentinel: _Sentinel = cast(_Sentinel, object())
+_sentinel = cast(_Sentinel, object())
 
 
 @final
@@ -50,12 +49,12 @@ class ReAwaitable:
 
     __slots__ = ('_cache', '_coro')
 
-    def __init__(self, coro: Awaitable[_ValueType]) -> None:
+    def __init__(self, coro):
         """We need just an awaitable to work with."""
         self._coro = coro
-        self._cache: _ValueType | _Sentinel = _sentinel
+        self._cache = _sentinel
 
-    def __await__(self) -> Generator[None, None, _ValueType]:
+    def __await__(self):
         """
         Allows to use ``await`` multiple times.
 
@@ -81,7 +80,7 @@ class ReAwaitable:
         """
         return self._awaitable().__await__()
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         """
         Formats this type the same way as the coroutine underneath.
 
@@ -99,16 +98,14 @@ class ReAwaitable:
         """
         return repr(self._coro)
 
-    async def _awaitable(self) -> _ValueType:
+    async def _awaitable(self):
         """Caches the once awaited value forever."""
         if self._cache is _sentinel:
             self._cache = await self._coro
-        return self._cache  # type: ignore
+        return self._cache
 
 
-def reawaitable(
-    coro: Callable[_Ps, _AwaitableT],
-) -> Callable[_Ps, _AwaitableT]:
+def reawaitable(coro):
     """
     Allows to decorate coroutine functions to be awaitable multiple times.
 
@@ -130,10 +127,7 @@ def reawaitable(
     """
 
     @wraps(coro)
-    def decorator(
-        *args: _Ps.args,
-        **kwargs: _Ps.kwargs,
-    ) -> _AwaitableT:
-        return ReAwaitable(coro(*args, **kwargs))  # type: ignore[return-value]
+    def decorator(*args, **kwargs):
+        return ReAwaitable(coro(*args, **kwargs))
 
     return decorator
