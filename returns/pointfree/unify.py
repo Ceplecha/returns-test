@@ -1,8 +1,7 @@
-from collections.abc import Callable
 from typing import TypeVar
 
 from returns.interfaces.failable import DiverseFailableN
-from returns.primitives.hkt import Kinded, KindN, kinded
+from returns.primitives.hkt import kinded
 
 _FirstType = TypeVar('_FirstType')
 _NewFirstType = TypeVar('_NewFirstType')
@@ -10,31 +9,10 @@ _SecondType = TypeVar('_SecondType')
 _NewSecondType = TypeVar('_NewSecondType')
 _ThirdType = TypeVar('_ThirdType')
 _NewThirdType = TypeVar('_NewThirdType')
-
 _DiverseFailableKind = TypeVar('_DiverseFailableKind', bound=DiverseFailableN)
 
 
-def unify(  # noqa: WPS234
-    function: Callable[
-        [_FirstType],
-        KindN[
-            _DiverseFailableKind,
-            _NewFirstType,
-            _NewSecondType,
-            _NewThirdType,
-        ],
-    ],
-) -> Kinded[
-    Callable[
-        [KindN[_DiverseFailableKind, _FirstType, _SecondType, _ThirdType]],
-        KindN[
-            _DiverseFailableKind,
-            _NewFirstType,
-            _SecondType | _NewSecondType,
-            _NewThirdType,
-        ],
-    ]
-]:
+def unify(function):
     """
     Composes successful container with a function that returns a container.
 
@@ -61,19 +39,7 @@ def unify(  # noqa: WPS234
     """
 
     @kinded
-    def factory(
-        container: KindN[
-            _DiverseFailableKind,
-            _FirstType,
-            _SecondType,
-            _ThirdType,
-        ],
-    ) -> KindN[
-        _DiverseFailableKind,
-        _NewFirstType,
-        _SecondType | _NewSecondType,
-        _NewThirdType,
-    ]:
-        return container.bind(function)  # type: ignore
+    def factory(container):
+        return container.bind(function)
 
     return factory

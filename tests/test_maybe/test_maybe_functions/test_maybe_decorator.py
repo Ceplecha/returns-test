@@ -2,7 +2,7 @@ from returns.maybe import Nothing, Some, maybe
 
 
 @maybe
-def _function(hashmap: dict[str, str], key: str) -> str | None:
+def _function(hashmap, key):
     return hashmap.get(key)
 
 

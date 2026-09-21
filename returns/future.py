@@ -1,13 +1,5 @@
-from collections.abc import (
-    AsyncGenerator,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Generator,
-)
 from functools import wraps
-from typing import Any, TypeAlias, TypeVar, final, overload
+from typing import TypeVar, final, overload
 
 from typing_extensions import ParamSpec
 
@@ -18,31 +10,22 @@ from returns.io import IO, IOResult
 from returns.primitives.container import BaseContainer
 from returns.primitives.exceptions import UnwrapFailedError
 from returns.primitives.hkt import (
-    Kind1,
-    Kind2,
     SupportsKind1,
     SupportsKind2,
     dekind,
 )
 from returns.primitives.reawaitable import ReAwaitable
-from returns.result import Failure, Result, Success
+from returns.result import Failure, Success
 
-# Definitions:
 _ValueType_co = TypeVar('_ValueType_co', covariant=True)
 _NewValueType = TypeVar('_NewValueType')
 _ErrorType_co = TypeVar('_ErrorType_co', covariant=True)
 _NewErrorType = TypeVar('_NewErrorType')
-
 _FuncParams = ParamSpec('_FuncParams')
-
-# Aliases:
 _FirstType = TypeVar('_FirstType')
 
 
-# Public composition helpers:
-
-
-async def async_identity(instance: _FirstType) -> _FirstType:  # noqa: RUF029
+async def async_identity(instance):
     """
     Async function that returns its argument.
 
@@ -59,12 +42,8 @@ async def async_identity(instance: _FirstType) -> _FirstType:  # noqa: RUF029
     return instance
 
 
-# Future
-# ======
-
-
 @final
-class Future(  # type: ignore[type-var]
+class Future(
     BaseContainer,
     SupportsKind1['Future', _ValueType_co],
     FutureBased1[_ValueType_co],
@@ -99,9 +78,7 @@ class Future(  # type: ignore[type-var]
 
     __slots__ = ()
 
-    _inner_value: Awaitable[_ValueType_co]
-
-    def __init__(self, inner_value: Awaitable[_ValueType_co]) -> None:
+    def __init__(self, inner_value):
         """
         Public constructor for this type. Also required for typing.
 
@@ -120,7 +97,7 @@ class Future(  # type: ignore[type-var]
         """
         super().__init__(ReAwaitable(inner_value))
 
-    def __await__(self) -> Generator[None, None, IO[_ValueType_co]]:
+    def __await__(self):
         """
         By defining this magic method we make ``Future`` awaitable.
 
@@ -148,7 +125,7 @@ class Future(  # type: ignore[type-var]
         """
         return self.awaitable().__await__()
 
-    async def awaitable(self) -> IO[_ValueType_co]:
+    async def awaitable(self):
         """
         Transforms ``Future[a]`` to ``Awaitable[IO[a]]``.
 
@@ -168,10 +145,7 @@ class Future(  # type: ignore[type-var]
         """
         return IO(await self._inner_value)
 
-    def map(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType],
-    ) -> 'Future[_NewValueType]':
+    def map(self, function):
         """
         Applies function to the inner value.
 
@@ -196,10 +170,7 @@ class Future(  # type: ignore[type-var]
         """
         return Future(_future.async_map(function, self._inner_value))
 
-    def apply(
-        self,
-        container: Kind1['Future', Callable[[_ValueType_co], _NewValueType]],
-    ) -> 'Future[_NewValueType]':
+    def apply(self, container):
         """
         Calls a wrapped function in a container on this container.
 
@@ -220,10 +191,7 @@ class Future(  # type: ignore[type-var]
         """
         return Future(_future.async_apply(dekind(container), self._inner_value))
 
-    def bind(
-        self,
-        function: Callable[[_ValueType_co], Kind1['Future', _NewValueType]],
-    ) -> 'Future[_NewValueType]':
+    def bind(self, function):
         """
         Applies 'function' to the result of a previous calculation.
 
@@ -246,16 +214,9 @@ class Future(  # type: ignore[type-var]
         """
         return Future(_future.async_bind(function, self._inner_value))
 
-    #: Alias for `bind` method. Part of the `FutureBasedN` interface.
     bind_future = bind
 
-    def bind_async(
-        self,
-        function: Callable[
-            [_ValueType_co],
-            Awaitable[Kind1['Future', _NewValueType]],
-        ],
-    ) -> 'Future[_NewValueType]':
+    def bind_async(self, function):
         """
         Compose a container and ``async`` function returning a container.
 
@@ -279,13 +240,9 @@ class Future(  # type: ignore[type-var]
         """
         return Future(_future.async_bind_async(function, self._inner_value))
 
-    #: Alias for `bind_async` method. Part of the `FutureBasedN` interface.
     bind_async_future = bind_async
 
-    def bind_awaitable(
-        self,
-        function: Callable[[_ValueType_co], 'Awaitable[_NewValueType]'],
-    ) -> 'Future[_NewValueType]':
+    def bind_awaitable(self, function):
         """
         Allows to compose a container and a regular ``async`` function.
 
@@ -307,17 +264,9 @@ class Future(  # type: ignore[type-var]
           ... ) == IO(2)
 
         """
-        return Future(
-            _future.async_bind_awaitable(
-                function,
-                self._inner_value,
-            )
-        )
+        return Future(_future.async_bind_awaitable(function, self._inner_value))
 
-    def bind_io(
-        self,
-        function: Callable[[_ValueType_co], IO[_NewValueType]],
-    ) -> 'Future[_NewValueType]':
+    def bind_io(self, function):
         """
         Applies 'function' to the result of a previous calculation.
 
@@ -340,19 +289,16 @@ class Future(  # type: ignore[type-var]
         """
         return Future(_future.async_bind_io(function, self._inner_value))
 
-    def __aiter__(self) -> AsyncIterator[_ValueType_co]:  # noqa: WPS611
+    def __aiter__(self):
         """API for :ref:`do-notation`."""
 
-        async def factory() -> AsyncGenerator[_ValueType_co, None]:
-            yield await self._inner_value
+        async def factory():
+            yield (await self._inner_value)
 
         return factory()
 
     @classmethod
-    def do(
-        cls,
-        expr: AsyncGenerator[_NewValueType, None],
-    ) -> 'Future[_NewValueType]':
+    def do(cls, expr):
         """
         Allows working with unwrapped values of containers in a safe way.
 
@@ -375,13 +321,13 @@ class Future(  # type: ignore[type-var]
 
         """
 
-        async def factory() -> _NewValueType:
+        async def factory():
             return await anext(expr)
 
         return Future(factory())
 
     @classmethod
-    def from_value(cls, inner_value: _NewValueType) -> 'Future[_NewValueType]':
+    def from_value(cls, inner_value):
         """
         Allows to create a ``Future`` from a plain value.
 
@@ -403,10 +349,7 @@ class Future(  # type: ignore[type-var]
         return Future(async_identity(inner_value))
 
     @classmethod
-    def from_future(
-        cls,
-        inner_value: 'Future[_NewValueType]',
-    ) -> 'Future[_NewValueType]':
+    def from_future(cls, inner_value):
         """
         Creates a new ``Future`` from the existing one.
 
@@ -424,7 +367,7 @@ class Future(  # type: ignore[type-var]
         return inner_value
 
     @classmethod
-    def from_io(cls, inner_value: IO[_NewValueType]) -> 'Future[_NewValueType]':
+    def from_io(cls, inner_value):
         """
         Allows to create a ``Future`` from ``IO`` container.
 
@@ -440,13 +383,10 @@ class Future(  # type: ignore[type-var]
           >>> assert anyio.run(main) is True
 
         """
-        return Future(async_identity(inner_value._inner_value))  # noqa: SLF001
+        return Future(async_identity(inner_value._inner_value))
 
     @classmethod
-    def from_future_result(
-        cls,
-        inner_value: 'FutureResult[_NewValueType, _NewErrorType]',
-    ) -> 'Future[Result[_NewValueType, _NewErrorType]]':
+    def from_future_result(cls, inner_value):
         """
         Creates ``Future[Result[a, b]]`` instance from ``FutureResult[a, b]``.
 
@@ -463,15 +403,10 @@ class Future(  # type: ignore[type-var]
           >>> assert anyio.run(container.awaitable) == IO(Success(1))
 
         """
-        return Future(inner_value._inner_value)  # noqa: SLF001
+        return Future(inner_value._inner_value)
 
 
-# Decorators:
-
-
-def future(
-    function: Callable[_FuncParams, Awaitable[_ValueType_co]],
-) -> Callable[_FuncParams, Future[_ValueType_co]]:
+def future(function):
     """
     Decorator to turn a coroutine definition into ``Future`` container.
 
@@ -490,18 +425,13 @@ def future(
     """
 
     @wraps(function)
-    def decorator(
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> Future[_ValueType_co]:
+    def decorator(*args, **kwargs):
         return Future(function(*args, **kwargs))
 
     return decorator
 
 
-def asyncify(
-    function: Callable[_FuncParams, _ValueType_co],
-) -> Callable[_FuncParams, Coroutine[Any, Any, _ValueType_co]]:
+def asyncify(function):
     """
     Decorator to turn a common function into an asynchronous function.
 
@@ -535,21 +465,14 @@ def asyncify(
     """
 
     @wraps(function)
-    async def decorator(  # noqa: RUF029
-        *args: _FuncParams.args,
-        **kwargs: _FuncParams.kwargs,
-    ) -> _ValueType_co:
+    async def decorator(*args, **kwargs):
         return function(*args, **kwargs)
 
     return decorator
 
 
-# FutureResult
-# ============
-
-
 @final
-class FutureResult(  # type: ignore[type-var]
+class FutureResult(
     BaseContainer,
     SupportsKind2['FutureResult', _ValueType_co, _ErrorType_co],
     FutureResultBased2[_ValueType_co, _ErrorType_co],
@@ -586,12 +509,7 @@ class FutureResult(  # type: ignore[type-var]
 
     __slots__ = ()
 
-    _inner_value: Awaitable[Result[_ValueType_co, _ErrorType_co]]
-
-    def __init__(
-        self,
-        inner_value: Awaitable[Result[_ValueType_co, _ErrorType_co]],
-    ) -> None:
+    def __init__(self, inner_value):
         """
         Public constructor for this type. Also required for typing.
 
@@ -611,13 +529,7 @@ class FutureResult(  # type: ignore[type-var]
         """
         super().__init__(ReAwaitable(inner_value))
 
-    def __await__(
-        self,
-    ) -> Generator[
-        None,
-        None,
-        IOResult[_ValueType_co, _ErrorType_co],
-    ]:
+    def __await__(self):
         """
         By defining this magic method we make ``FutureResult`` awaitable.
 
@@ -645,7 +557,7 @@ class FutureResult(  # type: ignore[type-var]
         """
         return self.awaitable().__await__()
 
-    async def awaitable(self) -> IOResult[_ValueType_co, _ErrorType_co]:
+    async def awaitable(self):
         """
         Transforms ``FutureResult[a, b]`` to ``Awaitable[IOResult[a, b]]``.
 
@@ -667,7 +579,7 @@ class FutureResult(  # type: ignore[type-var]
         """
         return IOResult.from_result(await self._inner_value)
 
-    def swap(self) -> 'FutureResult[_ErrorType_co, _ValueType_co]':
+    def swap(self):
         """
         Swaps value and error types.
 
@@ -689,10 +601,7 @@ class FutureResult(  # type: ignore[type-var]
         """
         return FutureResult(_future_result.async_swap(self._inner_value))
 
-    def map(
-        self,
-        function: Callable[[_ValueType_co], _NewValueType],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def map(self, function):
         """
         Applies function to the inner value.
 
@@ -719,20 +628,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_map(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_map(function, self._inner_value)
         )
 
-    def apply(
-        self,
-        container: Kind2[
-            'FutureResult',
-            Callable[[_ValueType_co], _NewValueType],
-            _ErrorType_co,
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def apply(self, container):
         """
         Calls a wrapped function in a container on this container.
 
@@ -769,19 +668,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_apply(
-                dekind(container),
-                self._inner_value,
-            )
+            _future_result.async_apply(dekind(container), self._inner_value)
         )
 
-    def bind(
-        self,
-        function: Callable[
-            [_ValueType_co],
-            Kind2['FutureResult', _NewValueType, _ErrorType_co],
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind(self, function):
         """
         Applies 'function' to the result of a previous calculation.
 
@@ -806,23 +696,12 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind(function, self._inner_value)
         )
 
-    #: Alias for `bind` method.
-    #: Part of the `FutureResultBasedN` interface.
     bind_future_result = bind
 
-    def bind_async(
-        self,
-        function: Callable[
-            [_ValueType_co],
-            Awaitable[Kind2['FutureResult', _NewValueType, _ErrorType_co]],
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_async(self, function):
         """
         Composes a container and ``async`` function returning container.
 
@@ -848,20 +727,12 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_async(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_async(function, self._inner_value)
         )
 
-    #: Alias for `bind_async` method.
-    #: Part of the `FutureResultBasedN` interface.
     bind_async_future_result = bind_async
 
-    def bind_awaitable(
-        self,
-        function: Callable[[_ValueType_co], Awaitable[_NewValueType]],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_awaitable(self, function):
         """
         Allows to compose a container and a regular ``async`` function.
 
@@ -887,18 +758,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_awaitable(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_awaitable(function, self._inner_value)
         )
 
-    def bind_result(
-        self,
-        function: Callable[
-            [_ValueType_co], Result[_NewValueType, _ErrorType_co]
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_result(self, function):
         """
         Binds a function returning ``Result[a, b]`` container.
 
@@ -921,18 +784,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_result(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_result(function, self._inner_value)
         )
 
-    def bind_ioresult(
-        self,
-        function: Callable[
-            [_ValueType_co], IOResult[_NewValueType, _ErrorType_co]
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_ioresult(self, function):
         """
         Binds a function returning ``IOResult[a, b]`` container.
 
@@ -954,16 +809,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_ioresult(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_ioresult(function, self._inner_value)
         )
 
-    def bind_io(
-        self,
-        function: Callable[[_ValueType_co], IO[_NewValueType]],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_io(self, function):
         """
         Binds a function returning ``IO[a]`` container.
 
@@ -985,16 +834,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_io(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_io(function, self._inner_value)
         )
 
-    def bind_future(
-        self,
-        function: Callable[[_ValueType_co], Future[_NewValueType]],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_future(self, function):
         """
         Binds a function returning ``Future[a]`` container.
 
@@ -1016,16 +859,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_future(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_future(function, self._inner_value)
         )
 
-    def bind_async_future(
-        self,
-        function: Callable[[_ValueType_co], Awaitable['Future[_NewValueType]']],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def bind_async_future(self, function):
         """
         Composes a container and ``async`` function returning ``Future``.
 
@@ -1052,16 +889,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_bind_async_future(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_bind_async_future(function, self._inner_value)
         )
 
-    def alt(
-        self,
-        function: Callable[[_ErrorType_co], _NewErrorType],
-    ) -> 'FutureResult[_ValueType_co, _NewErrorType]':
+    def alt(self, function):
         """
         Composes failed container with a pure function to modify failure.
 
@@ -1083,19 +914,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_alt(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_alt(function, self._inner_value)
         )
 
-    def lash(
-        self,
-        function: Callable[
-            [_ErrorType_co],
-            Kind2['FutureResult', _ValueType_co, _NewErrorType],
-        ],
-    ) -> 'FutureResult[_ValueType_co, _NewErrorType]':
+    def lash(self, function):
         """
         Composes failed container with a function that returns a container.
 
@@ -1117,19 +939,10 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_lash(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_lash(function, self._inner_value)
         )
 
-    def compose_result(
-        self,
-        function: Callable[
-            [Result[_ValueType_co, _ErrorType_co]],
-            Kind2['FutureResult', _NewValueType, _ErrorType_co],
-        ],
-    ) -> 'FutureResult[_NewValueType, _ErrorType_co]':
+    def compose_result(self, function):
         """
         Composes inner ``Result`` with ``FutureResult`` returning function.
 
@@ -1156,26 +969,20 @@ class FutureResult(  # type: ignore[type-var]
 
         """
         return FutureResult(
-            _future_result.async_compose_result(
-                function,
-                self._inner_value,
-            )
+            _future_result.async_compose_result(function, self._inner_value)
         )
 
-    def __aiter__(self) -> AsyncIterator[_ValueType_co]:  # noqa: WPS611
+    def __aiter__(self):
         """API for :ref:`do-notation`."""
 
-        async def factory() -> AsyncGenerator[_ValueType_co, None]:
-            for inner_value in await self._inner_value:  # pragma: no branch
-                yield inner_value  # will only yield once
+        async def factory():
+            for inner_value in await self._inner_value:
+                yield inner_value
 
         return factory()
 
     @classmethod
-    def do(
-        cls,
-        expr: AsyncGenerator[_NewValueType, None],
-    ) -> 'FutureResult[_NewValueType, _NewErrorType]':
+    def do(cls, expr):
         """
         Allows working with unwrapped values of containers in a safe way.
 
@@ -1207,19 +1014,16 @@ class FutureResult(  # type: ignore[type-var]
 
         """
 
-        async def factory() -> Result[_NewValueType, _NewErrorType]:
+        async def factory():
             try:
                 return Success(await anext(expr))
             except UnwrapFailedError as exc:
-                return exc.halted_container  # type: ignore
+                return exc.halted_container
 
         return FutureResult(factory())
 
     @classmethod
-    def from_typecast(
-        cls,
-        inner_value: Future[Result[_NewValueType, _NewErrorType]],
-    ) -> 'FutureResult[_NewValueType, _NewErrorType]':
+    def from_typecast(cls, inner_value):
         """
         Creates ``FutureResult[a, b]`` from ``Future[Result[a, b]]``.
 
@@ -1241,13 +1045,10 @@ class FutureResult(  # type: ignore[type-var]
           >>> anyio.run(main)
 
         """
-        return FutureResult(inner_value._inner_value)  # noqa: SLF001
+        return FutureResult(inner_value._inner_value)
 
     @classmethod
-    def from_future(
-        cls,
-        inner_value: Future[_NewValueType],
-    ) -> 'FutureResult[_NewValueType, Any]':
+    def from_future(cls, inner_value):
         """
         Creates ``FutureResult`` from successful ``Future`` value.
 
@@ -1268,10 +1069,7 @@ class FutureResult(  # type: ignore[type-var]
         return FutureResult(_future_result.async_from_success(inner_value))
 
     @classmethod
-    def from_failed_future(
-        cls,
-        inner_value: Future[_NewErrorType],
-    ) -> 'FutureResult[Any, _NewErrorType]':
+    def from_failed_future(cls, inner_value):
         """
         Creates ``FutureResult`` from failed ``Future`` value.
 
@@ -1292,10 +1090,7 @@ class FutureResult(  # type: ignore[type-var]
         return FutureResult(_future_result.async_from_failure(inner_value))
 
     @classmethod
-    def from_future_result(
-        cls,
-        inner_value: 'FutureResult[_NewValueType, _NewErrorType]',
-    ) -> 'FutureResult[_NewValueType, _NewErrorType]':
+    def from_future_result(cls, inner_value):
         """
         Creates new ``FutureResult`` from existing one.
 
@@ -1317,10 +1112,7 @@ class FutureResult(  # type: ignore[type-var]
         return inner_value
 
     @classmethod
-    def from_io(
-        cls,
-        inner_value: IO[_NewValueType],
-    ) -> 'FutureResult[_NewValueType, Any]':
+    def from_io(cls, inner_value):
         """
         Creates ``FutureResult`` from successful ``IO`` value.
 
@@ -1338,13 +1130,10 @@ class FutureResult(  # type: ignore[type-var]
           >>> anyio.run(main)
 
         """
-        return FutureResult.from_value(inner_value._inner_value)  # noqa: SLF001
+        return FutureResult.from_value(inner_value._inner_value)
 
     @classmethod
-    def from_failed_io(
-        cls,
-        inner_value: IO[_NewErrorType],
-    ) -> 'FutureResult[Any, _NewErrorType]':
+    def from_failed_io(cls, inner_value):
         """
         Creates ``FutureResult`` from failed ``IO`` value.
 
@@ -1362,13 +1151,10 @@ class FutureResult(  # type: ignore[type-var]
           >>> anyio.run(main)
 
         """
-        return FutureResult.from_failure(inner_value._inner_value)  # noqa: SLF001
+        return FutureResult.from_failure(inner_value._inner_value)
 
     @classmethod
-    def from_ioresult(
-        cls,
-        inner_value: IOResult[_NewValueType, _NewErrorType],
-    ) -> 'FutureResult[_NewValueType, _NewErrorType]':
+    def from_ioresult(cls, inner_value):
         """
         Creates ``FutureResult`` from ``IOResult`` value.
 
@@ -1389,13 +1175,10 @@ class FutureResult(  # type: ignore[type-var]
           >>> anyio.run(main)
 
         """
-        return FutureResult(async_identity(inner_value._inner_value))  # noqa: SLF001
+        return FutureResult(async_identity(inner_value._inner_value))
 
     @classmethod
-    def from_result(
-        cls,
-        inner_value: Result[_NewValueType, _NewErrorType],
-    ) -> 'FutureResult[_NewValueType, _NewErrorType]':
+    def from_result(cls, inner_value):
         """
         Creates ``FutureResult`` from ``Result`` value.
 
@@ -1420,10 +1203,7 @@ class FutureResult(  # type: ignore[type-var]
         return FutureResult(async_identity(inner_value))
 
     @classmethod
-    def from_value(
-        cls,
-        inner_value: _NewValueType,
-    ) -> 'FutureResult[_NewValueType, Any]':
+    def from_value(cls, inner_value):
         """
         Creates ``FutureResult`` from successful value.
 
@@ -1444,10 +1224,7 @@ class FutureResult(  # type: ignore[type-var]
         return FutureResult(async_identity(Success(inner_value)))
 
     @classmethod
-    def from_failure(
-        cls,
-        inner_value: _NewErrorType,
-    ) -> 'FutureResult[Any, _NewErrorType]':
+    def from_failure(cls, inner_value):
         """
         Creates ``FutureResult`` from failed value.
 
@@ -1468,9 +1245,7 @@ class FutureResult(  # type: ignore[type-var]
         return FutureResult(async_identity(Failure(inner_value)))
 
 
-def FutureSuccess(  # noqa: N802
-    inner_value: _NewValueType,
-) -> FutureResult[_NewValueType, Any]:
+def FutureSuccess(inner_value):
     """
     Public unit function to create successful ``FutureResult`` objects.
 
@@ -1489,9 +1264,7 @@ def FutureSuccess(  # noqa: N802
     return FutureResult.from_value(inner_value)
 
 
-def FutureFailure(  # noqa: N802
-    inner_value: _NewErrorType,
-) -> FutureResult[Any, _NewErrorType]:
+def FutureFailure(inner_value):
     """
     Public unit function to create failed ``FutureResult`` objects.
 
@@ -1510,44 +1283,19 @@ def FutureFailure(  # noqa: N802
     return FutureResult.from_failure(inner_value)
 
 
-#: Alias for ``FutureResult[_ValueType_co, Exception]``.
-FutureResultE: TypeAlias = FutureResult[_ValueType_co, Exception]
-
-
+FutureResultE = FutureResult[_ValueType_co, Exception]
 _ExceptionType = TypeVar('_ExceptionType', bound=Exception)
 
 
-# Decorators:
+@overload
+def future_safe(exceptions, /): ...
 
 
 @overload
-def future_safe(
-    exceptions: Callable[_FuncParams, Awaitable[_ValueType_co]],
-    /,
-) -> Callable[_FuncParams, FutureResultE[_ValueType_co]]: ...
+def future_safe(exceptions): ...
 
 
-@overload
-def future_safe(
-    exceptions: tuple[type[_ExceptionType], ...],
-) -> Callable[
-    [Callable[_FuncParams, Awaitable[_ValueType_co]]],
-    Callable[_FuncParams, FutureResult[_ValueType_co, _ExceptionType]],
-]: ...
-
-
-def future_safe(  # noqa: WPS212, WPS234,
-    exceptions: (
-        Callable[_FuncParams, Awaitable[_ValueType_co]]
-        | tuple[type[_ExceptionType], ...]
-    ),
-) -> (
-    Callable[_FuncParams, FutureResultE[_ValueType_co]]
-    | Callable[
-        [Callable[_FuncParams, Awaitable[_ValueType_co]]],
-        Callable[_FuncParams, FutureResult[_ValueType_co, _ExceptionType]],
-    ]
-):
+def future_safe(exceptions):
     """
     Decorator to convert exception-throwing coroutine to ``FutureResult``.
 
@@ -1600,28 +1348,17 @@ def future_safe(  # noqa: WPS212, WPS234,
 
     """
 
-    def _future_safe_factory(  # noqa: WPS430
-        function: Callable[_FuncParams, Awaitable[_ValueType_co]],
-        inner_exceptions: tuple[type[_ExceptionType], ...],
-    ) -> Callable[_FuncParams, FutureResult[_ValueType_co, _ExceptionType]]:
-        async def factory(
-            *args: _FuncParams.args,
-            **kwargs: _FuncParams.kwargs,
-        ) -> Result[_ValueType_co, _ExceptionType]:
+    def _future_safe_factory(function, inner_exceptions):
+
+        async def factory(*args, **kwargs):
             pass
 
         @wraps(function)
-        def decorator(
-            *args: _FuncParams.args,
-            **kwargs: _FuncParams.kwargs,
-        ) -> FutureResult[_ValueType_co, _ExceptionType]:
+        def decorator(*args, **kwargs):
             return FutureResult(factory(*args, **kwargs))
 
         return decorator
 
     if isinstance(exceptions, tuple):
         return lambda function: _future_safe_factory(function, exceptions)
-    return _future_safe_factory(
-        exceptions,
-        (Exception,),  # type: ignore[arg-type]
-    )
+    return _future_safe_factory(exceptions, (Exception,))

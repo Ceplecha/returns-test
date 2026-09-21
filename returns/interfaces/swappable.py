@@ -1,12 +1,9 @@
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import ClassVar, Never, TypeVar, final
+from typing import Never, TypeVar, final
 
 from returns.interfaces import bimappable
 from returns.primitives.asserts import assert_equal
-from returns.primitives.hkt import KindN
 from returns.primitives.laws import (
-    Law,
     Law1,
     Lawful,
     LawSpecDef,
@@ -16,7 +13,6 @@ from returns.primitives.laws import (
 _FirstType = TypeVar('_FirstType')
 _SecondType = TypeVar('_SecondType')
 _ThirdType = TypeVar('_ThirdType')
-
 _SwappableType = TypeVar('_SwappableType', bound='SwappableN')
 
 
@@ -27,19 +23,14 @@ class _LawSpec(LawSpecDef):
     __slots__ = ()
 
     @law_definition
-    def double_swap_law(
-        container: 'SwappableN[_FirstType, _SecondType, _ThirdType]',
-    ) -> None:
+    def double_swap_law(container):
         """
         Swapping container twice.
 
         It ensure that we get the initial value back.
         In other words, swapping twice does nothing.
         """
-        assert_equal(
-            container,
-            container.swap().swap(),
-        )
+        assert_equal(container, container.swap().swap())
 
 
 class SwappableN(
@@ -49,18 +40,12 @@ class SwappableN(
     """Interface that allows swapping first and second type values."""
 
     __slots__ = ()
-
-    _laws: ClassVar[Sequence[Law]] = (Law1(_LawSpec.double_swap_law),)
+    _laws = (Law1(_LawSpec.double_swap_law),)
 
     @abstractmethod
-    def swap(
-        self: _SwappableType,
-    ) -> KindN[_SwappableType, _SecondType, _FirstType, _ThirdType]:
+    def swap(self):
         """Swaps first and second types in ``SwappableN``."""
 
 
-#: Type alias for kinds with two type arguments.
 Swappable2 = SwappableN[_FirstType, _SecondType, Never]
-
-#: Type alias for kinds with three type arguments.
 Swappable3 = SwappableN[_FirstType, _SecondType, _ThirdType]
